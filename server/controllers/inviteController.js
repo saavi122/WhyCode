@@ -6,6 +6,17 @@ import User from "../models/User.js";
 import Company from "../models/Company.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
+const getClientUrl = (req) => {
+  if (req.headers.origin) return req.headers.origin;
+  if (req.headers.referer) {
+    try {
+      const url = new URL(req.headers.referer);
+      return url.origin;
+    } catch (e) {}
+  }
+  return process.env.CLIENT_URL || "http://localhost:5173";
+};
+
 // POST /api/invites/send (company only)
 export const sendInvite = async (req, res, next) => {
   try {
@@ -55,7 +66,8 @@ export const sendInvite = async (req, res, next) => {
     const companyName = company ? company.name : "CodeMemory Enterprise Workspace";
 
     // Send email
-    const inviteUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/invite/accept?token=${token}`;
+    const clientUrl = getClientUrl(req);
+    const inviteUrl = `${clientUrl}/invite/accept?token=${token}`;
     
     const emailHtml = `
       <div style="background-color: #f3f4f6; padding: 40px; font-family: 'Inter', system-ui, sans-serif; color: #111827;">
@@ -235,7 +247,7 @@ export const listInvites = async (req, res, next) => {
       .populate("invitedBy", "name")
       .sort({ createdAt: -1 });
 
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = getClientUrl(req);
 
     // Attach invite link for pending invites so dashboard can show copy-link
     const enriched = invites.map((inv) => ({
@@ -276,7 +288,8 @@ export const resendInvite = async (req, res, next) => {
     const companyName = company ? company.name : "CodeMemory Enterprise Workspace";
 
     // Resend invite url
-    const inviteUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/invite/accept?token=${token}`;
+    const clientUrl = getClientUrl(req);
+    const inviteUrl = `${clientUrl}/invite/accept?token=${token}`;
     const emailHtml = `
       <div style="background-color: #f3f4f6; padding: 40px; font-family: 'Inter', system-ui, sans-serif; color: #111827;">
         <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb;">
