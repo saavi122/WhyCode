@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle, AlertTriangle, User } from "lucide-react";
+import { CheckCircle, AlertTriangle, User, Mail, Sparkles } from "lucide-react";
 import API from "../services/api";
+import "./Auth.css";
 
 export default function EmployeeAcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -57,15 +58,25 @@ export default function EmployeeAcceptInvite() {
     }
   };
 
+  const renderBackground = () => (
+    <>
+      <div className="bg-grid"></div>
+      <div className="noise-overlay"></div>
+      <div className="aurora-container">
+        <div className="aurora-light-purple"></div>
+        <div className="aurora-light-emerald"></div>
+      </div>
+    </>
+  );
+
   if (verifying) {
     return (
-      <div style={{
-        minHeight: "100vh", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        backgroundColor: "#0a0f1e", color: "#f9fafb", fontFamily: "'Inter', sans-serif"
-      }}>
-        <div style={{ fontSize: "32px", marginBottom: "16px", animation: "spin 1s linear infinite", display: "inline-block" }}>⚡</div>
-        <p style={{ fontSize: "14px", color: "#6b7280" }}>Verifying your invitation link...</p>
+      <div className="auth-split-container" style={{ justifyContent: "center", alignItems: "center" }}>
+        {renderBackground()}
+        <div style={{ textAlign: "center", zIndex: 10 }}>
+          <div style={{ fontSize: "36px", marginBottom: "16px", animation: "spin 1s linear infinite", display: "inline-block" }}>⚡</div>
+          <p style={{ fontSize: "14px", color: "#a1a1aa", fontWeight: "500" }}>Verifying your invitation link...</p>
+        </div>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -73,33 +84,29 @@ export default function EmployeeAcceptInvite() {
 
   if (!inviteValid) {
     return (
-      <div style={{
-        minHeight: "100vh", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        backgroundColor: "#0a0f1e", color: "#f9fafb", fontFamily: "'Inter', sans-serif", padding: "24px"
-      }}>
-        <div style={{
-          width: "100%", maxWidth: "420px", backgroundColor: "#111827",
-          border: "1px solid #1f2937", borderRadius: "16px", padding: "40px",
-          boxShadow: "0 20px 40px -15px rgba(0,0,0,0.7)", textAlign: "center"
-        }}>
+      <div className="auth-split-container" style={{ justifyContent: "center", alignItems: "center" }}>
+        {renderBackground()}
+        <div className="glass-auth-card" style={{ zIndex: 10, textAlign: "center" }}>
           <div style={{
-            width: "48px", height: "48px", borderRadius: "50%",
-            backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            color: "#ef4444", marginBottom: "16px"
+            width: "48px",
+            height: "48px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.15)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ef4444",
+            marginBottom: "20px"
           }}>
-            <AlertTriangle size={20} />
+            <AlertTriangle size={22} />
           </div>
-          <h2 style={{ fontSize: "18px", fontWeight: "900", margin: "0 0 10px 0" }}>Link Invalid or Expired</h2>
-          <p style={{ fontSize: "13px", color: "#6b7280", lineHeight: "1.6", margin: "0 0 24px 0" }}>{errorMsg}</p>
+          <h2 className="auth-title" style={{ color: "#ffffff" }}>Link Invalid or Expired</h2>
+          <p className="auth-subtitle" style={{ marginBottom: "28px" }}>{errorMsg}</p>
           <button
             onClick={() => navigate("/employee/login")}
-            style={{
-              width: "100%", backgroundColor: "#1f2937", border: "1px solid #374151",
-              color: "#fff", padding: "12px", borderRadius: "8px",
-              fontWeight: "700", fontSize: "13px", cursor: "pointer"
-            }}
+            className="btn-auth-submit"
+            style={{ fontWeight: "700" }}
           >
             Go to Employee Login
           </button>
@@ -109,90 +116,103 @@ export default function EmployeeAcceptInvite() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      backgroundColor: "#0a0f1e", color: "#f9fafb", fontFamily: "'Inter', sans-serif", padding: "24px"
-    }}>
-      <div style={{
-        width: "100%", maxWidth: "440px", backgroundColor: "#111827",
-        border: "1px solid #1f2937", borderRadius: "16px", padding: "40px",
-        boxShadow: "0 20px 40px -15px rgba(0,0,0,0.7)"
-      }}>
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+    <div className="auth-split-container" style={{ justifyContent: "center", alignItems: "center" }}>
+      {renderBackground()}
+      
+      <div className="glass-auth-card" style={{ zIndex: 10 }}>
+        <div className="auth-header">
           <div style={{
-            width: "48px", height: "48px", borderRadius: "50%",
-            backgroundColor: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            color: "#10b981", marginBottom: "16px"
+            width: "48px",
+            height: "48px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(16, 185, 129, 0.08)",
+            border: "1px solid rgba(16, 185, 129, 0.15)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#10b981",
+            marginBottom: "20px"
           }}>
-            <CheckCircle size={20} />
+            <CheckCircle size={22} />
           </div>
-          <h2 style={{ fontSize: "18px", fontWeight: "900", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>
+          <h2 className="auth-title" style={{ fontSize: "26px", fontWeight: "800", color: "#ffffff" }}>
             You're Invited!
           </h2>
-          <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>
-            Join <strong style={{ color: "#fff" }}>{companyName}</strong> on CodeMemory
+          <p className="auth-subtitle">
+            Join <strong style={{ color: "#ffffff" }}>{companyName}</strong> on CodeMemory
           </p>
         </div>
 
-        {/* No password info */}
+        {/* No password info banner */}
         <div style={{
-          backgroundColor: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)",
-          borderRadius: "10px", padding: "12px 14px", marginBottom: "24px",
-          fontSize: "12px", color: "#10b981", lineHeight: "1.6"
+          backgroundColor: "rgba(16, 185, 129, 0.04)",
+          border: "1px solid rgba(16, 185, 129, 0.1)",
+          borderRadius: "14px",
+          padding: "14px 16px",
+          marginBottom: "28px",
+          fontSize: "12px",
+          color: "#10b981",
+          lineHeight: "1.6",
+          display: "flex",
+          gap: "8px",
+          alignItems: "flex-start"
         }}>
-          🔐 No password required. You'll sign in anytime with just your email and company name.
+          <Sparkles size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+          <span>No password required. You'll sign in anytime with just your email and company name.</span>
         </div>
 
         {submitError && (
           <div style={{
-            backgroundColor: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)",
-            borderRadius: "10px", padding: "12px", color: "#ef4444",
-            fontSize: "12px", marginBottom: "20px", textAlign: "center"
+            backgroundColor: "rgba(239, 68, 68, 0.06)",
+            border: "1px solid rgba(239, 68, 68, 0.15)",
+            borderRadius: "12px",
+            padding: "12px",
+            color: "#ef4444",
+            fontSize: "12px",
+            marginBottom: "20px",
+            textAlign: "center"
           }}>
             {submitError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Email (read-only) */}
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "6px" }}>
+          <div className="form-group">
+            <label className="form-label">
               Email Address
             </label>
-            <input
-              type="text"
-              value={email}
-              disabled
-              style={{
-                width: "100%", backgroundColor: "#1f2937", border: "1px solid #1f2937",
-                borderRadius: "8px", padding: "10px 12px", color: "#6b7280",
-                fontSize: "13px", cursor: "not-allowed", boxSizing: "border-box"
-              }}
-            />
+            <div className="input-container">
+              <Mail size={16} className="input-icon" />
+              <input
+                type="text"
+                value={email}
+                disabled
+                className="input-field"
+                style={{
+                  color: "#6b7280",
+                  cursor: "not-allowed",
+                  borderColor: "rgba(255, 255, 255, 0.03)",
+                  background: "rgba(255, 255, 255, 0.005)"
+                }}
+              />
+            </div>
           </div>
 
           {/* Full Name */}
-          <div>
-            <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "6px" }}>
+          <div className="form-group">
+            <label className="form-label">
               Your Full Name
             </label>
-            <div style={{ position: "relative" }}>
-              <User size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#6b7280" }} />
+            <div className="input-container">
+              <User size={16} className="input-icon" />
               <input
                 type="text"
                 placeholder="Your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                style={{
-                  width: "100%", backgroundColor: "#1f2937", border: "1px solid #374151",
-                  borderRadius: "8px", padding: "10px 12px 10px 36px", color: "#fff",
-                  fontSize: "13px", outline: "none", boxSizing: "border-box"
-                }}
-                onFocus={(e) => e.target.style.borderColor = "#10b981"}
-                onBlur={(e) => e.target.style.borderColor = "#374151"}
+                className="input-field"
               />
             </div>
           </div>
@@ -200,12 +220,7 @@ export default function EmployeeAcceptInvite() {
           <button
             type="submit"
             disabled={submitting}
-            style={{
-              backgroundColor: "#10b981", border: "none", color: "#fff",
-              padding: "12px", borderRadius: "8px", fontWeight: "700",
-              fontSize: "13px", cursor: "pointer", marginTop: "12px",
-              transition: "opacity 0.2s", opacity: submitting ? 0.7 : 1
-            }}
+            className="btn-auth-submit"
           >
             {submitting ? "Joining Workspace..." : "Join CodeMemory →"}
           </button>
