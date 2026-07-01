@@ -2,6 +2,7 @@ import "express-async-errors";
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
@@ -63,7 +64,12 @@ app.all("/api/*", (req, res) => {
 
 // Catch-all to serve index.html for client-side routing
 app.get("*", (req, res) => {
-  res.sendFile(path.resolve(clientDistPath, "index.html"));
+  const indexPath = path.resolve(clientDistPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(500).send("Frontend build not found. Please ensure the build step 'npm run build' completed successfully on Render.");
+  }
 });
 
 app.use(errorHandler);
