@@ -73,10 +73,13 @@ export const sendInvite = async (req, res, next) => {
       </div>
     `;
 
-    await sendEmail({
+    // Send email asynchronously so that slow SMTP or Ethereal account creation doesn't block the request/invite creation
+    sendEmail({
       to: lowercaseEmail,
       subject: "You're invited to join CodeMemory",
       html: emailHtml,
+    }).catch((err) => {
+      console.error("Failed to send invite email:", err);
     });
 
     res.json({
@@ -290,10 +293,13 @@ export const resendInvite = async (req, res, next) => {
       </div>
     `;
 
-    await sendEmail({
+    // Send email asynchronously so that slow SMTP or Ethereal account creation doesn't block the request/invite creation
+    sendEmail({
       to: invite.email,
       subject: "You're invited to join CodeMemory",
       html: emailHtml,
+    }).catch((err) => {
+      console.error("Failed to resend invite email:", err);
     });
 
     res.json({
