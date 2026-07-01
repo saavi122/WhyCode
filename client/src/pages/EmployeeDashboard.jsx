@@ -982,25 +982,36 @@ export default function EmployeeDashboard() {
                       { id: "gateway", label: "SSO Gateway", type: "Security" },
                       { id: "auth", label: "Auth Controller", type: "Service" },
                       { id: "redis", label: "Redis Cache", type: "Cache" }
-                    ].map((node) => (
-                      <div
-                        key={node.id}
-                        onClick={() => setSelectedNode(node)}
-                        style={{
-                          width: "200px", 
-                          backgroundColor: selectedNode?.id === node.id ? "rgba(0, 242, 254, 0.05)" : "rgba(255,255,255,0.01)", 
-                          border: "1px solid",
-                          borderColor: selectedNode?.id === node.id ? "#00f2fe" : "rgba(255, 255, 255, 0.08)",
-                          borderRadius: "10px", 
-                          padding: "14px", 
-                          textAlign: "center", 
-                          cursor: "pointer",
-                          transition: "all 0.2s"
-                        }}
-                      >
-                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#ffffff" }}>{node.label}</div>
-                        <div style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", marginTop: "6px", fontWeight: "700" }}>{node.type}</div>
-                      </div>
+                    ].map((node, index, arr) => (
+                      <React.Fragment key={node.id}>
+                        <div
+                          onClick={() => setSelectedNode(node)}
+                          style={{
+                            width: "200px", 
+                            backgroundColor: selectedNode?.id === node.id ? "rgba(0, 242, 254, 0.05)" : "rgba(255,255,255,0.01)", 
+                            border: "1px solid",
+                            borderColor: selectedNode?.id === node.id ? "#00f2fe" : "rgba(255, 255, 255, 0.08)",
+                            borderRadius: "10px", 
+                            padding: "14px", 
+                            textAlign: "center", 
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            boxShadow: selectedNode?.id === node.id ? "0 0 15px rgba(0, 242, 254, 0.15)" : "none"
+                          }}
+                        >
+                          <div style={{ fontSize: "13px", fontWeight: "700", color: "#ffffff" }}>{node.label}</div>
+                          <div style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", marginTop: "6px", fontWeight: "700" }}>{node.type}</div>
+                        </div>
+                        {index < arr.length - 1 && (
+                          <div style={{
+                            width: "2px",
+                            height: "16px",
+                            background: "linear-gradient(180deg, #00f2fe, #8b5cf6)",
+                            opacity: 0.5,
+                            margin: "-8px 0"
+                          }} />
+                        )}
+                      </React.Fragment>
                     ))}
                   </div>
 
