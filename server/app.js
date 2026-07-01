@@ -52,6 +52,20 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/employee", employeeDashboardRoutes);
 app.use("/api/team", teamRoutes);
 
+// Serve static assets
+const clientDistPath = path.join(__dirname, "../client/dist");
+app.use(express.static(clientDistPath));
+
+// API 404 handler for any unmatched /api routes
+app.all("/api/*", (req, res) => {
+  res.status(404).json({ error: "API endpoint not found" });
+});
+
+// Catch-all to serve index.html for client-side routing
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve(clientDistPath, "index.html"));
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
