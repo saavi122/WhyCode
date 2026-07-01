@@ -1,0 +1,369 @@
+{
+  "info": {
+    "_postman_id": "b3e5b6c3-1d07-4e78-831d-d421cd7de7fa",
+    "name": "WhyCode API Collection",
+    "description": "Postman Collection for testing all WhyCode (CodeMemory) backend APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "GitHub OAuth Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PASTE_GITHUB_OAUTH_CODE_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/github",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "github"
+              ]
+            },
+            "description": "Exchanges a temporary GitHub OAuth code for an access token, registers/finds the user, and returns a JWT token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Retrieves profile details of the currently logged-in user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Repositories",
+      "item": [
+        {
+          "name": "List Connected Repositories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/repositories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "repositories"
+              ]
+            },
+            "description": "Returns a list of all git repositories registered by the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Repository",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"octocat/Hello-World\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/repositories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "repositories"
+              ]
+            },
+            "description": "Registers a new GitHub repository by fetching its metadata from GitHub using the user's OAuth credentials."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Repository Risk Analysis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/repositories/{{repoId}}/risk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "repositories",
+                "{{repoId}}",
+                "risk"
+              ]
+            },
+            "description": "Retrieves documentation health metrics, knowledge coverage, and bus factor risk scoring."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Scans",
+      "item": [
+        {
+          "name": "Trigger Repository Scan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/scan/{{repoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "scan",
+                "{{repoId}}"
+              ]
+            },
+            "description": "Asynchronously initiates a codebase scan, running code parsing, git commits extraction, and Gemini drift detection."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Drifts",
+      "item": [
+        {
+          "name": "List Open Drifts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drift/{{repoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "drift",
+                "{{repoId}}"
+              ]
+            },
+            "description": "Lists all identified documentation drifts (e.g. outdated docstrings/comments) for the repository."
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve Drift Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"accepted\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/drift/{{driftId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "drift",
+                "{{driftId}}"
+              ]
+            },
+            "description": "Resolves a drift issue by accepting or rejecting the AI-suggested documentation patch."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Timeline & Q&A",
+      "item": [
+        {
+          "name": "Get File Timeline & Intent",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/timeline/{{repoId}}/src/App.jsx",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "timeline",
+                "{{repoId}}",
+                "src",
+                "App.jsx"
+              ]
+            },
+            "description": "Retrieves the commit timeline, blame ranges, and runs Gemini to reconstruct 'why' the file exists."
+          },
+          "response": []
+        },
+        {
+          "name": "Ask Repository Q&A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Who is the main author of the scanner system and why was it created?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/{{repoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "chat",
+                "{{repoId}}"
+              ]
+            },
+            "description": "Submits a natural-language question, extracts cached commit memories, and grounds Gemini to answer with citations."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "PASTE_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "repoId",
+      "value": "PASTE_REGISTERED_REPOSITORY_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "driftId",
+      "value": "PASTE_DRIFT_INCIDENT_ID_HERE",
+      "type": "string"
+    }
+  ]
+}
