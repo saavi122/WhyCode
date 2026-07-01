@@ -10,13 +10,13 @@ WhyCode (internally **CodeMemory**) is a full-stack MERN application that uses A
 
 | Feature | Description |
 |---|---|
-| 📄 **Documentation Drift Detection** | AI compares docstrings/comments against current code and flags outdated documentation with severity scores |
-| 🔍 **Intent Reconstruction** | "Why does this function exist?" — answered using commit history, PR discussions, and Git blame |
-| 💬 **AI Knowledge Chat** | Ask free-text questions about your codebase; get answers grounded in real commit and PR evidence |
-| 📊 **Repo Health Dashboard** | Doc health score, knowledge coverage %, and bus-factor risk per repository |
-| 🗂️ **Commit Memory Timeline** | Per-file timeline showing who changed what, when, and why |
-| 👥 **Team & Organization Management** | Multi-tenant support with companies, teams, invites, and role-based access |
-| 🔐 **GitHub OAuth + JWT Auth** | Secure login via GitHub; all API calls scoped to the user's own access token |
+| **Documentation Drift Detection** | AI compares docstrings/comments against current code and flags outdated documentation with severity scores |
+| **Intent Reconstruction** | "Why does this function exist?" — answered using commit history, PR discussions, and Git blame |
+| **AI Knowledge Chat** | Ask free-text questions about your codebase; get answers grounded in real commit and PR evidence |
+| **Repo Health Dashboard** | Doc health score, knowledge coverage %, and bus-factor risk per repository |
+| **Commit Memory Timeline** | Per-file timeline showing who changed what, when, and why |
+| **Team & Organization Management** | Multi-tenant support with companies, teams, invites, and role-based access |
+| **GitHub OAuth + JWT Auth** | Secure login via GitHub; all API calls scoped to the user's own access token |
 
 ---
 
@@ -121,10 +121,6 @@ GEMINI_API_KEY=your_google_gemini_api_key
 # Server / Client
 PORT=5000
 CLIENT_URL=http://localhost:5173
-
-# Admin Seeder (optional)
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=yourAdminPassword
 ```
 
 ### 3. Install Dependencies
