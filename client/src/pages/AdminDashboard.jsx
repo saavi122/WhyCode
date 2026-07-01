@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -9,11 +9,31 @@ import API from "../services/api";
 import StatCard from "../components/StatCard";
 import ConfirmDialog from "../components/ConfirmDialog";
 import LoadingSpinner from "../components/LoadingSpinner";
+import "./EmployeeDashboard.css";
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      document.documentElement.style.setProperty("--mouse-global-x", `${x}px`);
+      document.documentElement.style.setProperty("--mouse-global-y", `${y}px`);
+    };
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    return () => window.removeEventListener("mousemove", handleGlobalMouseMove);
+  }, []);
+
+  const handleCardMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty("--mouse-x", `${x}px`);
+    e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
+  };
 
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "companies" | "users"
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -106,59 +126,40 @@ export default function AdminDashboard() {
   const isLoading = statsLoading || companiesLoading || usersLoading;
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      backgroundColor: "#0a0f1e",
-      color: "#f9fafb",
-      fontFamily: "'Inter', sans-serif",
-      display: "flex"
-    }}>
+    <div className="dashboard-root">
+      {/* Background Decorative Grids and Ambient glows */}
+      <div className="dashboard-bg-grid" />
+      <div className="dashboard-noise" />
+      <div className="ambient-glow-1" />
+      <div className="ambient-glow-2" />
+      <div className="dashboard-spotlight" />
+
       {/* Sidebar */}
-      <aside style={{
-        width: "260px",
-        backgroundColor: "#0d1424",
-        borderRight: "1px solid #1f2937",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        padding: "32px 24px",
-        boxSizing: "border-box",
-        position: "sticky",
-        top: 0,
-        height: "100vh"
-      }}>
+      <aside className="sidebar-container">
         <div>
           {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "36px" }}>
-            <div style={{
-              width: "32px", height: "32px", borderRadius: "8px",
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: "900", color: "#fff", fontSize: "16px"
-            }}>
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-icon" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 0 15px rgba(16, 185, 129, 0.4)" }}>
               A
             </div>
-            <span style={{ fontSize: "16px", fontWeight: "900", letterSpacing: "-0.03em" }}>CodeMemory Admin</span>
+            <span className="sidebar-logo-text">Admin Center</span>
           </div>
 
           {/* Nav */}
-          <nav style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <nav className="sidebar-nav">
             {[
-              { key: "overview", label: "Overview", icon: <Sliders size={15} /> },
-              { key: "companies", label: "Companies", icon: <Building size={15} /> },
-              { key: "users", label: "All Users", icon: <Users size={15} /> }
+              { key: "overview", label: "Overview", icon: <Sliders size={14} /> },
+              { key: "companies", label: "Companies", icon: <Building size={14} /> },
+              { key: "users", label: "All Users", icon: <Users size={14} /> }
             ].map((item) => (
               <button
                 key={item.key}
                 onClick={() => setActiveTab(item.key)}
+                className={`sidebar-link ${activeTab === item.key ? "active" : ""}`}
                 style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  fontSize: "13px", fontWeight: activeTab === item.key ? "700" : "600",
-                  padding: "10px 16px", borderRadius: "8px",
-                  color: activeTab === item.key ? "#10b981" : "#9ca3af",
-                  backgroundColor: activeTab === item.key ? "rgba(16,185,129,0.08)" : "transparent",
-                  borderLeft: activeTab === item.key ? "3px solid #10b981" : "3px solid transparent",
-                  border: "none", cursor: "pointer", textAlign: "left", width: "100%"
+                  color: activeTab === item.key ? "#10b981" : "#a1a1aa",
+                  backgroundColor: activeTab === item.key ? "rgba(16,185,129,0.06)" : "transparent",
+                  borderLeftColor: activeTab === item.key ? "#10b981" : "transparent"
                 }}
               >
                 {item.icon}
@@ -169,26 +170,16 @@ export default function AdminDashboard() {
         </div>
 
         {/* User Info & LogOut */}
-        <div>
-          <div style={{
-            display: "flex", alignItems: "center", gap: "12px", padding: "12px",
-            backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid #1f2937", borderRadius: "12px", marginBottom: "16px"
-          }}>
-            <div style={{
-              width: "36px", height: "36px", borderRadius: "50%",
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "800", color: "#fff"
-            }}>
+        <div className="sidebar-user-section">
+          <div className="sidebar-user-card">
+            <div className="sidebar-user-avatar" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.2)" }}>
               AD
             </div>
             <div style={{ flexGrow: 1, minWidth: 0 }}>
               <p style={{ fontSize: "12px", fontWeight: "700", margin: 0, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
                 {user?.name || "System Admin"}
               </p>
-              <span style={{
-                fontSize: "9px", textTransform: "uppercase", color: "#10b981", fontWeight: "800",
-                display: "inline-block", backgroundColor: "rgba(16,185,129,0.08)", padding: "1px 6px", borderRadius: "4px", marginTop: "3px"
-              }}>
+              <span className="premium-badge badge-emerald" style={{ marginTop: "4px", padding: "2px 6px" }}>
                 SUPER ADMIN
               </span>
             </div>
@@ -197,21 +188,21 @@ export default function AdminDashboard() {
           <button
             onClick={logout}
             style={{
-              width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
-              borderRadius: "8px", border: "1px solid #1f2937", background: "none", color: "#6b7280",
-              fontSize: "13px", fontWeight: "700", cursor: "pointer", transition: "all 0.2s"
+              width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
+              borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255,255,255,0.01)", color: "#a1a1aa",
+              fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s"
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.2)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#6b7280"; e.currentTarget.style.borderColor = "#1f2937"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#f43f5e"; e.currentTarget.style.borderColor = "rgba(244,63,94,0.3)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#a1a1aa"; e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)"; }}
           >
-            <LogOut size={14} />
+            <LogOut size={13} />
             <span>Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main style={{ flexGrow: 1, padding: "40px", boxSizing: "border-box", overflowY: "auto", height: "100vh" }}>
+      <main style={{ flexGrow: 1, padding: "40px", boxSizing: "border-box", overflowY: "auto", height: "100vh", position: "relative", zIndex: 5 }}>
         {isLoading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
             <LoadingSpinner size="large" />
@@ -220,26 +211,26 @@ export default function AdminDashboard() {
           <div>
             {/* OVERVIEW PANEL */}
             {activeTab === "overview" && (
-              <div>
+              <div className="animate-slide-up">
                 <div style={{ marginBottom: "32px" }}>
-                  <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>Admin Configuration Center</h2>
-                  <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Global platform telemetry, workspaces, and licenses auditor.</p>
+                  <h2 className="hero-title">Admin Configuration Center</h2>
+                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>Global platform telemetry, workspaces, and licenses auditor.</p>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px", marginBottom: "40px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "24px", marginBottom: "40px" }}>
                   <StatCard icon={Building} value={stats?.totalCompanies || 0} label="Total Workspaces" accentColor="#10b981" />
                   <StatCard icon={Users} value={stats?.totalUsers || 0} label="Total User Accounts" accentColor="#06b6d4" />
                   <StatCard icon={Shield} value={stats?.activeLicenses || 0} label="Active Enterprise Licenses" accentColor="#8b5cf6" />
                 </div>
 
-                <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "16px", padding: "24px" }}>
-                  <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 16px 0", borderBottom: "1px solid #1f2937", paddingBottom: "12px" }}>
+                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "28px" }}>
+                  <h3 style={{ fontSize: "15px", fontWeight: "800", margin: "0 0 20px 0", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", paddingBottom: "14px", color: "#ffffff" }}>
                     Quick Management Tips
                   </h3>
-                  <p style={{ fontSize: "13px", color: "#9ca3af", lineHeight: "1.6", margin: "0 0 12px 0" }}>
+                  <p style={{ fontSize: "13px", color: "#a1a1aa", lineHeight: "1.7", margin: "0 0 14px 0" }}>
                     - <strong>Enterprise Workspaces:</strong> You can toggle user limits or plans from the "Companies" tab.
                   </p>
-                  <p style={{ fontSize: "13px", color: "#9ca3af", lineHeight: "1.6", margin: 0 }}>
+                  <p style={{ fontSize: "13px", color: "#a1a1aa", lineHeight: "1.7", margin: 0 }}>
                     - <strong>Deactivating Users:</strong> Deactivating a company owner will lock access for that entire tenant. Use caution.
                   </p>
                 </div>
@@ -248,52 +239,47 @@ export default function AdminDashboard() {
 
             {/* COMPANIES PANEL */}
             {activeTab === "companies" && (
-              <div>
-                <div style={{ marginBottom: "24px" }}>
-                  <h2 style={{ fontSize: "20px", fontWeight: "900", margin: "0 0 6px 0" }}>Manage Workspaces</h2>
-                  <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Configure subscriptions, active nodes, and delete tenants.</p>
+              <div className="animate-slide-up">
+                <div style={{ marginBottom: "28px" }}>
+                  <h2 className="hero-title">Manage Workspaces</h2>
+                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>Configure subscriptions, active nodes, and delete tenants.</p>
                 </div>
 
-                <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "16px", overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                     <thead>
-                      <tr style={{ borderBottom: "1px solid #1f2937", textAlign: "left", backgroundColor: "#0d1424" }}>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Company Name</th>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Owner Email</th>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Current Plan</th>
-                        <th style={{ padding: "16px", color: "#6b7280", textAlign: "right" }}>Actions</th>
+                      <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", textAlign: "left", backgroundColor: "rgba(255, 255, 255, 0.01)" }}>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Company Name</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Owner Email</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Current Plan</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {companies?.map((c) => (
-                        <tr key={c._id} style={{ borderBottom: "1px solid #1f2937" }}>
+                        <tr key={c._id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
                           <td 
-                            style={{ padding: "16px", fontWeight: "800", color: "#10b981", cursor: "pointer", transition: "color 0.2s" }}
+                            style={{ padding: "18px 24px", fontWeight: "700", color: "#10b981", cursor: "pointer", transition: "color 0.2s" }}
                             onClick={() => setDetailCompanyId(c._id)}
                             onMouseEnter={(e) => e.currentTarget.style.color = "#059669"}
                             onMouseLeave={(e) => e.currentTarget.style.color = "#10b981"}
                           >
                             {c.name}
                           </td>
-                          <td style={{ padding: "16px", color: "#9ca3af" }}>{c.ownerId?.email || "No Owner"}</td>
-                          <td style={{ padding: "16px" }}>
-                            <span style={{
-                              fontSize: "10px", fontWeight: "800", padding: "3px 8px", borderRadius: "6px",
-                              backgroundColor: c.plan === "enterprise" ? "rgba(139,92,246,0.08)" : "rgba(16,185,129,0.08)",
-                              color: c.plan === "enterprise" ? "#8b5cf6" : "#10b981",
-                              textTransform: "uppercase"
-                            }}>
+                          <td style={{ padding: "18px 24px", color: "#d1d5db" }}>{c.ownerId?.email || "No Owner"}</td>
+                          <td style={{ padding: "18px 24px" }}>
+                            <span className={`premium-badge ${c.plan === "enterprise" ? "badge-purple" : "badge-emerald"}`}>
                               {c.plan}
                             </span>
                           </td>
-                          <td style={{ padding: "16px", textAlign: "right" }}>
-                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                          <td style={{ padding: "18px 24px", textAlign: "right" }}>
+                            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", alignItems: "center" }}>
                               <select
                                 value={c.plan}
                                 onChange={(e) => planMutation.mutate({ companyId: c._id, plan: e.target.value })}
                                 style={{
-                                  backgroundColor: "#1f2937", border: "1px solid #374151", color: "#fff",
-                                  borderRadius: "6px", padding: "4px 8px", fontSize: "11px", cursor: "pointer"
+                                  backgroundColor: "rgba(10, 10, 10, 0.8)", border: "1px solid rgba(255, 255, 255, 0.08)", color: "#fff",
+                                  borderRadius: "6px", padding: "6px 10px", fontSize: "12px", cursor: "pointer", outline: "none"
                                 }}
                               >
                                 <option value="free">Free</option>
@@ -302,10 +288,8 @@ export default function AdminDashboard() {
                               </select>
                               <button
                                 onClick={() => setSelectedCompany(c)}
-                                style={{
-                                  backgroundColor: "transparent", border: "1px solid #ef4444", color: "#ef4444",
-                                  padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer"
-                                }}
+                                className="premium-btn"
+                                style={{ borderColor: "rgba(244,63,94,0.3)", color: "#f43f5e", padding: "6px 12px" }}
                               >
                                 Delete
                               </button>
@@ -321,54 +305,47 @@ export default function AdminDashboard() {
 
             {/* USERS PANEL */}
             {activeTab === "users" && (
-              <div>
-                <div style={{ marginBottom: "24px" }}>
-                  <h2 style={{ fontSize: "20px", fontWeight: "900", margin: "0 0 6px 0" }}>Global Users Audit</h2>
-                  <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Review authentication credentials, roles, and status keys.</p>
+              <div className="animate-slide-up">
+                <div style={{ marginBottom: "28px" }}>
+                  <h2 className="hero-title">Global Users Audit</h2>
+                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>Review authentication credentials, roles, and status keys.</p>
                 </div>
 
-                <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "16px", overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                     <thead>
-                      <tr style={{ borderBottom: "1px solid #1f2937", textAlign: "left", backgroundColor: "#0d1424" }}>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Name</th>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Email</th>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Role</th>
-                        <th style={{ padding: "16px", color: "#6b7280" }}>Status</th>
-                        <th style={{ padding: "16px", color: "#6b7280", textAlign: "right" }}>Actions</th>
+                      <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", textAlign: "left", backgroundColor: "rgba(255, 255, 255, 0.01)" }}>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Name</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Email</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Role</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Status</th>
+                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {users?.map((u) => (
-                        <tr key={u._id} style={{ borderBottom: "1px solid #1f2937" }}>
-                          <td style={{ padding: "16px", fontWeight: "700" }}>{u.name}</td>
-                          <td style={{ padding: "16px", color: "#9ca3af" }}>{u.email}</td>
-                          <td style={{ padding: "16px" }}>
-                            <span style={{
-                              fontSize: "10px", fontWeight: "800", padding: "2px 6px", borderRadius: "4px",
-                              backgroundColor: "rgba(255,255,255,0.04)", color: "#d1d5db"
-                            }}>
+                        <tr key={u._id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                          <td style={{ padding: "18px 24px", fontWeight: "700", color: "#ffffff" }}>{u.name}</td>
+                          <td style={{ padding: "18px 24px", color: "#d1d5db" }}>{u.email}</td>
+                          <td style={{ padding: "18px 24px" }}>
+                            <span className="premium-badge badge-purple" style={{ textTransform: "none" }}>
                               {u.role}
                             </span>
                           </td>
-                          <td style={{ padding: "16px" }}>
-                            <span style={{
-                              fontSize: "10px", fontWeight: "800", padding: "2px 8px", borderRadius: "12px",
-                              backgroundColor: u.isActive ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
-                              color: u.isActive ? "#10b981" : "#ef4444"
-                            }}>
+                          <td style={{ padding: "18px 24px" }}>
+                            <span className={`premium-badge ${u.isActive ? "badge-emerald" : "badge-rose"}`}>
                               {u.isActive ? "Active" : "Deactivated"}
                             </span>
                           </td>
-                          <td style={{ padding: "16px", textAlign: "right" }}>
+                          <td style={{ padding: "18px 24px", textAlign: "right" }}>
                             {u.role !== "admin" && (
                               <button
                                 onClick={() => toggleUserActiveMutation.mutate({ userId: u._id, isActive: !u.isActive })}
+                                className="premium-btn"
                                 style={{
-                                  backgroundColor: "transparent",
-                                  border: `1px solid ${u.isActive ? "#ef4444" : "#10b981"}`,
-                                  color: u.isActive ? "#ef4444" : "#10b981",
-                                  padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer"
+                                  borderColor: u.isActive ? "rgba(244,63,94,0.3)" : "rgba(16,185,129,0.3)",
+                                  color: u.isActive ? "#f43f5e" : "#10b981",
+                                  padding: "6px 12px"
                                 }}
                               >
                                 {u.isActive ? "Deactivate" : "Activate"}
@@ -399,39 +376,42 @@ export default function AdminDashboard() {
       {detailCompanyId && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center",
+          backgroundColor: "rgba(0, 0, 0, 0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center",
           justifyContent: "center", zIndex: 1000, padding: "20px"
         }}>
           <div style={{
-            backgroundColor: "#0d1424", border: "1px solid #1f2937", borderRadius: "16px",
-            width: "100%", maxWidth: "750px", maxHeight: "85vh", display: "flex", flexDirection: "column",
-            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.5)", overflow: "hidden"
+            background: "linear-gradient(135deg, rgba(15, 15, 20, 0.98) 0%, rgba(10, 10, 16, 0.98) 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "20px",
+            width: "100%", maxWidth: "760px", maxHeight: "85vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 30px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)", overflow: "hidden"
           }}>
             {/* Modal Header */}
             <div style={{
-              padding: "20px 24px", borderBottom: "1px solid #1f2937",
+              padding: "24px 32px", borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
               display: "flex", alignItems: "center", justify: "space-between",
-              backgroundColor: "#111827", justifyContent: "space-between"
+              backgroundColor: "rgba(255, 255, 255, 0.01)", justifyContent: "space-between"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <Building size={18} style={{ color: "#10b981" }} />
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: 0, color: "#fff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Building size={20} style={{ color: "#10b981" }} />
+                <h3 style={{ fontSize: "16px", fontWeight: "800", margin: 0, color: "#fff", letterSpacing: "-0.01em" }}>
                   {companyDetails?.company?.name || "Loading..."} - Workspace Audit
                 </h3>
               </div>
               <button
                 onClick={() => setDetailCompanyId(null)}
                 style={{
-                  background: "none", border: "none", color: "#9ca3af",
-                  cursor: "pointer", fontSize: "20px", fontWeight: "bold"
+                  background: "none", border: "none", color: "#8a8a93",
+                  cursor: "pointer", fontSize: "22px", fontWeight: "bold", transition: "color 0.2s"
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "#8a8a93"}
               >
-                &times;
+                ✕
               </button>
             </div>
 
             {/* Modal Content */}
-            <div style={{ padding: "24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ padding: "32px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "28px" }}>
               {detailsLoading ? (
                 <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
                   <LoadingSpinner size="medium" />
@@ -439,40 +419,40 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   {/* Stats Summary Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
-                    <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
-                      <span style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700" }}>Subscription Plan</span>
-                      <p style={{ fontSize: "16px", fontWeight: "800", color: "#10b981", margin: "6px 0 0" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
+                    <div style={{ backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                      <span style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Subscription Plan</span>
+                      <p style={{ fontSize: "18px", fontWeight: "800", color: "#10b981", margin: "8px 0 0" }}>
                         {(companyDetails?.company?.plan || "free").toUpperCase()}
                       </p>
                     </div>
-                    <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
-                      <span style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700" }}>Active Employees</span>
-                      <p style={{ fontSize: "16px", fontWeight: "800", color: "#06b6d4", margin: "6px 0 0" }}>
+                    <div style={{ backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                      <span style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Active Employees</span>
+                      <p style={{ fontSize: "18px", fontWeight: "800", color: "#06b6d4", margin: "8px 0 0" }}>
                         {companyDetails?.employees?.length || 0}
                       </p>
                     </div>
-                    <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
-                      <span style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700" }}>Connected Repositories</span>
-                      <p style={{ fontSize: "16px", fontWeight: "800", color: "#8b5cf6", margin: "6px 0 0" }}>
+                    <div style={{ backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
+                      <span style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Connected Repositories</span>
+                      <p style={{ fontSize: "18px", fontWeight: "800", color: "#8b5cf6", margin: "8px 0 0" }}>
                         {companyDetails?.repositories?.length || 0}
                       </p>
                     </div>
                   </div>
 
                   {/* Git Integration Details */}
-                  <div style={{ backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid #1f2937", borderRadius: "10px", padding: "16px" }}>
-                    <h4 style={{ fontSize: "12px", color: "#fff", fontWeight: "800", margin: "0 0 10px 0", textTransform: "uppercase" }}>GitHub App Integration Status</h4>
-                    <p style={{ fontSize: "11px", color: "#9ca3af", margin: "0 0 6px 0" }}>
-                      <strong>Status:</strong> {companyDetails?.company?.github?.connected ? "Connected" : "Not Connected"}
+                  <div style={{ backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: "20px" }}>
+                    <h4 style={{ fontSize: "13px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>GitHub App Integration Status</h4>
+                    <p style={{ fontSize: "12px", color: "#a1a1aa", margin: "0 0 8px 0" }}>
+                      <strong>Status:</strong> <span style={{ color: "#ffffff" }}>{companyDetails?.company?.github?.connected ? "Connected" : "Not Connected"}</span>
                     </p>
                     {companyDetails?.company?.github?.connected && (
                       <>
-                        <p style={{ fontSize: "11px", color: "#9ca3af", margin: "0 0 6px 0" }}>
-                          <strong>Organization Name:</strong> {companyDetails?.company?.github?.organization}
+                        <p style={{ fontSize: "12px", color: "#a1a1aa", margin: "0 0 8px 0" }}>
+                          <strong>Organization Name:</strong> <span style={{ color: "#ffffff" }}>{companyDetails?.company?.github?.organization}</span>
                         </p>
-                        <p style={{ fontSize: "11px", color: "#9ca3af", margin: "0" }}>
-                          <strong>Connection Date:</strong> {new Date(companyDetails?.company?.github?.connectedAt).toLocaleDateString()}
+                        <p style={{ fontSize: "12px", color: "#a1a1aa", margin: "0" }}>
+                          <strong>Connection Date:</strong> <span style={{ color: "#ffffff" }}>{new Date(companyDetails?.company?.github?.connectedAt).toLocaleDateString()}</span>
                         </p>
                       </>
                     )}
@@ -480,39 +460,34 @@ export default function AdminDashboard() {
 
                   {/* Invited Employees Section */}
                   <div>
-                    <h4 style={{ fontSize: "12px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase" }}>Invited Employees</h4>
+                    <h4 style={{ fontSize: "13px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Invited Employees</h4>
                     {(!companyDetails?.invites || companyDetails.invites.length === 0) ? (
-                      <div style={{ textAlign: "center", padding: "20px 0", border: "1px dashed #1f2937", borderRadius: "8px", color: "#6b7280", fontSize: "11px" }}>
+                      <div style={{ textAlign: "center", padding: "24px 0", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "10px", color: "#8a8a93", fontSize: "12px" }}>
                         No invitations sent yet.
                       </div>
                     ) : (
-                      <div style={{ overflow: "hidden", border: "1px solid #1f2937", borderRadius: "8px" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px", textAlign: "left" }}>
+                      <div style={{ overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "10px" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px", textAlign: "left" }}>
                           <thead>
-                            <tr style={{ backgroundColor: "#111827", borderBottom: "1px solid #1f2937" }}>
-                              <th style={{ padding: "10px 12px", color: "#6b7280" }}>Name</th>
-                              <th style={{ padding: "10px 12px", color: "#6b7280" }}>Email</th>
-                              <th style={{ padding: "10px 12px", color: "#6b7280" }}>Repository</th>
-                              <th style={{ padding: "10px 12px", color: "#6b7280" }}>Status</th>
+                            <tr style={{ backgroundColor: "rgba(255,255,255,0.01)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Name</th>
+                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Email</th>
+                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Repository</th>
+                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Status</th>
                             </tr>
                           </thead>
                           <tbody>
                             {companyDetails.invites.map((invite) => (
-                              <tr key={invite._id} style={{ borderBottom: "1px solid #1f2937" }}>
-                                <td style={{ padding: "10px 12px", fontWeight: "600", color: "#fff" }}>{invite.name || "N/A"}</td>
-                                <td style={{ padding: "10px 12px", color: "#9ca3af" }}>{invite.email}</td>
-                                <td style={{ padding: "10px 12px" }}>
-                                  <code style={{ fontSize: "10px", color: "#6366f1", backgroundColor: "rgba(99,102,241,0.06)", padding: "2px 6px", borderRadius: "4px" }}>
+                              <tr key={invite._id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                                <td style={{ padding: "12px 16px", fontWeight: "600", color: "#fff" }}>{invite.name || "N/A"}</td>
+                                <td style={{ padding: "12px 16px", color: "#a1a1aa" }}>{invite.email}</td>
+                                <td style={{ padding: "12px 16px" }}>
+                                  <code style={{ fontSize: "11px", color: "#00f2fe", backgroundColor: "rgba(0,242,254,0.05)", padding: "3px 8px", borderRadius: "4px" }}>
                                     {invite.assignedRepo || "All Repositories"}
                                   </code>
                                 </td>
-                                <td style={{ padding: "10px 12px" }}>
-                                  <span style={{
-                                    fontSize: "9px", fontWeight: "800", padding: "2px 6px", borderRadius: "4px",
-                                    backgroundColor: invite.status === "accepted" ? "rgba(16,185,129,0.08)" : invite.status === "expired" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
-                                    color: invite.status === "accepted" ? "#10b981" : invite.status === "expired" ? "#ef4444" : "#f59e0b",
-                                    textTransform: "uppercase"
-                                  }}>
+                                <td style={{ padding: "12px 16px" }}>
+                                  <span className={`premium-badge ${invite.status === "accepted" ? "badge-emerald" : invite.status === "expired" ? "badge-rose" : "badge-amber"}`} style={{ textTransform: "none" }}>
                                     {invite.status}
                                   </span>
                                 </td>
@@ -526,24 +501,24 @@ export default function AdminDashboard() {
 
                   {/* Connected Repositories Section */}
                   <div>
-                    <h4 style={{ fontSize: "12px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase" }}>Monitored Code Repositories</h4>
+                    <h4 style={{ fontSize: "13px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Monitored Code Repositories</h4>
                     {(!companyDetails?.repositories || companyDetails.repositories.length === 0) ? (
-                      <div style={{ textAlign: "center", padding: "20px 0", border: "1px dashed #1f2937", borderRadius: "8px", color: "#6b7280", fontSize: "11px" }}>
+                      <div style={{ textAlign: "center", padding: "24px 0", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "10px", color: "#8a8a93", fontSize: "12px" }}>
                         No repositories connected yet.
                       </div>
                     ) : (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                         {companyDetails.repositories.map((repo) => (
                           <div
                             key={repo._id}
                             style={{
-                              backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "6px",
-                              padding: "8px 12px", fontSize: "11px", display: "flex", alignItems: "center", gap: "8px"
+                              backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px",
+                              padding: "10px 16px", fontSize: "12px", display: "flex", alignItems: "center", gap: "10px"
                             }}
                           >
-                            <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: repo.status === "completed" ? "#10b981" : "#f59e0b" }} />
+                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: repo.status === "completed" ? "#10b981" : "#f59e0b", boxShadow: repo.status === "completed" ? "0 0 8px #10b981" : "0 0 8px #f59e0b" }} />
                             <span style={{ fontWeight: "600", color: "#fff" }}>{repo.repoName}</span>
-                            <span style={{ color: "#6b7280", fontSize: "10px" }}>({repo.language})</span>
+                            <span style={{ color: "#8a8a93", fontSize: "11px" }}>({repo.language})</span>
                           </div>
                         ))}
                       </div>
@@ -555,15 +530,12 @@ export default function AdminDashboard() {
 
             {/* Modal Footer */}
             <div style={{
-              padding: "16px 24px", borderTop: "1px solid #1f2937",
-              display: "flex", justifyContent: "flex-end", backgroundColor: "#111827"
+              padding: "20px 32px", borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+              display: "flex", justifyContent: "flex-end", backgroundColor: "rgba(255, 255, 255, 0.01)"
             }}>
               <button
                 onClick={() => setDetailCompanyId(null)}
-                style={{
-                  backgroundColor: "#1f2937", border: "1px solid #374151", color: "#fff",
-                  padding: "8px 16px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer"
-                }}
+                className="premium-btn"
               >
                 Close Audit
               </button>

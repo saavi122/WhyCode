@@ -10,11 +10,31 @@ import {
 import API from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StatCard from "../components/StatCard";
+import "./EmployeeDashboard.css";
 
 export default function EmployeeDashboard() {
   const { logout } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      document.documentElement.style.setProperty("--mouse-global-x", `${x}px`);
+      document.documentElement.style.setProperty("--mouse-global-y", `${y}px`);
+    };
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    return () => window.removeEventListener("mousemove", handleGlobalMouseMove);
+  }, []);
+
+  const handleCardMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty("--mouse-x", `${x}px`);
+    e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
+  };
 
   const [activeTab, setActiveTab] = useState("dashboard"); // sidebar tab
   const [selectedRepo, setSelectedRepo] = useState(null); // active repository in explorer
@@ -243,116 +263,92 @@ export default function EmployeeDashboard() {
   });
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      backgroundColor: "#0a0f1e",
-      color: "#f9fafb",
-      fontFamily: "'Inter', sans-serif",
-      display: "flex"
-    }}>
+    <div className="dashboard-root">
+      {/* Background Decorative Grids and Ambient glows */}
+      <div className="dashboard-bg-grid" />
+      <div className="dashboard-noise" />
+      <div className="ambient-glow-1" />
+      <div className="ambient-glow-2" />
+      <div className="dashboard-spotlight" />
+
       {/* Sidebar */}
-      <aside style={{
-        width: "250px",
-        backgroundColor: "#0d1424",
-        borderRight: "1px solid #1f2937",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        padding: "24px 16px",
-        boxSizing: "border-box",
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        zIndex: 10
-      }}>
+      <aside className="sidebar-container">
         <div style={{ overflowY: "auto", flex: 1, paddingRight: "4px" }}>
           {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px", paddingLeft: "10px" }}>
-            <div style={{
-              width: "28px", height: "28px", borderRadius: "6px",
-              background: "linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: "900", color: "#fff", fontSize: "14px"
-            }}>
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-icon">
               C
             </div>
-            <span style={{ fontSize: "15px", fontWeight: "900", letterSpacing: "-0.03em" }}>CodeMemory Workspace</span>
+            <span className="sidebar-logo-text">CodeMemory</span>
           </div>
 
           {/* Navigation Links */}
-          <nav style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-            <button onClick={() => setActiveTab("dashboard")} style={navItemStyle("dashboard")}>
+          <nav className="sidebar-nav">
+            <button onClick={() => setActiveTab("dashboard")} className={`sidebar-link ${activeTab === "dashboard" ? "active" : ""}`}>
               <Sliders size={14} /> <span>Workspace</span>
             </button>
-            <button onClick={() => setActiveTab("invitations")} style={navItemStyle("invitations")}>
+            <button onClick={() => setActiveTab("invitations")} className={`sidebar-link ${activeTab === "invitations" ? "active" : ""}`}>
               <Mail size={14} /> <span>Invitations</span>
             </button>
-            <button onClick={() => setActiveTab("team")} style={navItemStyle("team")}>
-              <Users size={14} /> <span>👥 Team</span>
+            <button onClick={() => setActiveTab("team")} className={`sidebar-link ${activeTab === "team" ? "active" : ""}`}>
+              <Users size={14} /> <span>Teammates</span>
             </button>
-            <button onClick={() => setActiveTab("projects")} style={navItemStyle("projects")}>
+            <button onClick={() => setActiveTab("projects")} className={`sidebar-link ${activeTab === "projects" ? "active" : ""}`}>
               <Folder size={14} /> <span>My Projects</span>
             </button>
-            <button onClick={() => setActiveTab("repositories")} style={navItemStyle("repositories")}>
-              <GitFork size={14} /> <span>My Repositories</span>
+            <button onClick={() => setActiveTab("repositories")} className={`sidebar-link ${activeTab === "repositories" ? "active" : ""}`}>
+              <GitFork size={14} /> <span>Repositories</span>
             </button>
-            <button onClick={() => setActiveTab("workspace")} style={navItemStyle("workspace")}>
-              <Sparkles size={14} /> <span>AI Workspace</span>
+            <button onClick={() => setActiveTab("workspace")} className={`sidebar-link ${activeTab === "workspace" ? "active" : ""}`}>
+              <Sparkles size={14} /> <span>AI Inspector</span>
             </button>
-            <button onClick={() => setActiveTab("chat")} style={navItemStyle("chat")}>
+            <button onClick={() => setActiveTab("chat")} className={`sidebar-link ${activeTab === "chat" ? "active" : ""}`}>
               <MessageSquare size={14} /> <span>AI Chat</span>
             </button>
-            <button onClick={() => setActiveTab("hub")} style={navItemStyle("hub")}>
+            <button onClick={() => setActiveTab("hub")} className={`sidebar-link ${activeTab === "hub" ? "active" : ""}`}>
               <BookOpen size={14} /> <span>Knowledge Hub</span>
             </button>
-            <button onClick={() => setActiveTab("docs")} style={navItemStyle("docs")}>
-              <FileText size={14} /> <span>Documentation</span>
+            <button onClick={() => setActiveTab("docs")} className={`sidebar-link ${activeTab === "docs" ? "active" : ""}`}>
+              <FileText size={14} /> <span>API Specs</span>
             </button>
-            <button onClick={() => setActiveTab("search")} style={navItemStyle("search")}>
+            <button onClick={() => setActiveTab("search")} className={`sidebar-link ${activeTab === "search" ? "active" : ""}`}>
               <Search size={14} /> <span>Code Search</span>
             </button>
-            <button onClick={() => setActiveTab("graph")} style={navItemStyle("graph")}>
-              <Layers size={14} /> <span>Dependency Graph</span>
+            <button onClick={() => setActiveTab("graph")} className={`sidebar-link ${activeTab === "graph" ? "active" : ""}`}>
+              <Layers size={14} /> <span>Dependencies</span>
             </button>
-            <button onClick={() => setActiveTab("analytics")} style={navItemStyle("analytics")}>
+            <button onClick={() => setActiveTab("analytics")} className={`sidebar-link ${activeTab === "analytics" ? "active" : ""}`}>
               <TrendingUp size={14} /> <span>My Analytics</span>
             </button>
-            <button onClick={() => setActiveTab("timeline")} style={navItemStyle("timeline")}>
+            <button onClick={() => setActiveTab("timeline")} className={`sidebar-link ${activeTab === "timeline" ? "active" : ""}`}>
               <Clock size={14} /> <span>Change Timeline</span>
             </button>
-            <button onClick={() => setActiveTab("prs")} style={navItemStyle("prs")}>
+            <button onClick={() => setActiveTab("prs")} className={`sidebar-link ${activeTab === "prs" ? "active" : ""}`}>
               <Share2 size={14} /> <span>Pull Requests</span>
             </button>
-            <button onClick={() => setActiveTab("tasks")} style={navItemStyle("tasks")}>
+            <button onClick={() => setActiveTab("tasks")} className={`sidebar-link ${activeTab === "tasks" ? "active" : ""}`}>
               <CheckCircle size={14} /> <span>Assigned Tasks</span>
             </button>
-            <button onClick={() => setActiveTab("settings")} style={navItemStyle("settings")}>
+            <button onClick={() => setActiveTab("settings")} className={`sidebar-link ${activeTab === "settings" ? "active" : ""}`}>
               <Settings size={14} /> <span>Settings</span>
             </button>
           </nav>
         </div>
 
         {/* User Badge */}
-        <div style={{ marginTop: "16px", borderTop: "1px solid #1f2937", paddingTop: "16px" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: "10px", padding: "8px",
-            backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid #1f2937", borderRadius: "10px", marginBottom: "12px"
-          }}>
-            <div style={{
-              width: "36px", height: "36px", borderRadius: "50%",
-              background: "linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#fff", fontWeight: "800"
-            }}>
+        <div className="sidebar-user-section">
+          <div className="sidebar-user-card">
+            <div className="sidebar-user-avatar">
               {profile?.initials || "EM"}
             </div>
             <div style={{ flexGrow: 1, minWidth: 0 }}>
-              <p style={{ fontSize: "11px", fontWeight: "700", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <p style={{ fontSize: "12px", fontWeight: "700", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {profile?.name}
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
                 <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10b981" }} />
-                <span style={{ fontSize: "9px", textTransform: "uppercase", color: "#6b7280", fontWeight: "800" }}>
-                  {profile?.designation} • {profile?.companyName}
+                <span style={{ fontSize: "9px", textTransform: "uppercase", color: "#8a8a93", fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {profile?.designation}
                 </span>
               </div>
             </div>
@@ -361,12 +357,12 @@ export default function EmployeeDashboard() {
           <button
             onClick={logout}
             style={{
-              width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px",
-              borderRadius: "6px", border: "1px solid #1f2937", background: "none", color: "#6b7280",
-              fontSize: "12px", fontWeight: "700", cursor: "pointer", transition: "color 0.2s"
+              width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
+              borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255,255,255,0.01)", color: "#a1a1aa",
+              fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s"
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.2)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#6b7280"; e.currentTarget.style.borderColor = "#1f2937"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#f43f5e"; e.currentTarget.style.borderColor = "rgba(244,63,94,0.3)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#a1a1aa"; e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)"; }}
           >
             <LogOut size={13} />
             <span>Sign Out</span>
@@ -375,7 +371,7 @@ export default function EmployeeDashboard() {
       </aside>
 
       {/* Workspace Panel Viewports */}
-      <main style={{ flexGrow: 1, padding: "32px", boxSizing: "border-box", overflowY: "auto", height: "100vh" }}>
+      <main style={{ flexGrow: 1, padding: "40px", boxSizing: "border-box", overflowY: "auto", height: "100vh", position: "relative", zIndex: 5 }}>
         {isLoading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
             <LoadingSpinner size="large" />
@@ -384,56 +380,74 @@ export default function EmployeeDashboard() {
           <div>
             {/* 1. DASHBOARD OVERVIEW */}
             {activeTab === "dashboard" && (
-              <div>
-                <div style={{ marginBottom: "28px" }}>
-                  <h2 style={{ fontSize: "20px", fontWeight: "900", margin: "0 0 4px 0", letterSpacing: "-0.02em" }}>
+              <div className="animate-slide-up">
+                <div style={{ marginBottom: "32px" }}>
+                  <h2 className="hero-title">
                     Good Morning, {profile?.name?.split(" ")[0]} 💻
                   </h2>
-                  <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>CodeMemory indexed software engineering environment.</p>
+                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>CodeMemory indexed software engineering environment.</p>
                 </div>
 
                 {/* AI Summary Banner */}
                 {dashboard?.aiSummary && (
-                  <div style={{
-                    backgroundColor: "rgba(6,182,212,0.04)", border: "1px solid rgba(6,182,212,0.15)",
-                    borderRadius: "12px", padding: "18px 24px", marginBottom: "28px"
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#06b6d4", marginBottom: "10px" }}>
+                  <div 
+                    className="premium-card" 
+                    onMouseMove={handleCardMouseMove}
+                    style={{
+                      borderLeft: "4px solid #00f2fe",
+                      background: "linear-gradient(90deg, rgba(0, 242, 254, 0.02) 0%, rgba(10, 10, 10, 0.45) 100%)",
+                      padding: "24px",
+                      marginBottom: "32px"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#00f2fe", marginBottom: "12px" }}>
                       <Sparkles size={16} />
-                      <span style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase" }}>Yesterday's AI Summary</span>
+                      <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em" }}>Yesterday's AI Summary</span>
                     </div>
-                    <p style={{ fontSize: "13px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
+                    <p style={{ fontSize: "14px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
                       {dashboard.aiSummary.text}
                     </p>
-                    <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "8px" }}>
+                    <div style={{ fontSize: "11px", color: "#8a8a93", marginTop: "12px" }}>
                       Last generated: {dashboard.aiSummary.lastGenerated}
                     </div>
                   </div>
                 )}
 
                 {/* Stats */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px", marginBottom: "28px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px", marginBottom: "32px" }}>
                   <StatCard icon={Folder} value={dashboard?.totalRooms || 0} label="Assigned Projects" accentColor="#06b6d4" />
                   <StatCard icon={GitFork} value={dashboard?.totalRepos || 0} label="Tracked Repositories" accentColor="#6366f1" />
                   <StatCard icon={Terminal} value={dashboard?.totalCommits || 0} label="Analyzed Commits" accentColor="#10b981" />
                   <StatCard icon={ShieldCheck} value={`${dashboard?.avgDocHealth || 0}%`} label="Avg Code Health Score" accentColor="#8b5cf6" />
                 </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
                   {/* Assigned Repositories */}
-                  <div style={{ flex: "1 1 300px", backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h3 style={{ fontSize: "13px", fontWeight: "800", margin: "0 0 16px 0", borderBottom: "1px solid #1f2937", paddingBottom: "10px" }}>Assigned Repositories</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ flex: "1 1 300px" }}>
+                    <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 20px 0", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", paddingBottom: "12px", color: "#ffffff", letterSpacing: "-0.01em" }}>Assigned Repositories</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                       {dashboard?.repos?.length === 0 ? (
-                        <div style={{ fontSize: "12px", color: "#6b7280", padding: "10px 0" }}>No repositories linked.</div>
+                        <div style={{ fontSize: "13px", color: "#8a8a93", padding: "12px 0" }}>No repositories linked.</div>
                       ) : (
                         dashboard?.repos?.map((repo) => (
-                          <div key={repo._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#0a0f1e", padding: "10px 14px", borderRadius: "8px" }}>
+                          <div 
+                            key={repo._id} 
+                            style={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center", 
+                              backgroundColor: "rgba(255, 255, 255, 0.02)", 
+                              border: "1px solid rgba(255, 255, 255, 0.04)",
+                              padding: "12px 16px", 
+                              borderRadius: "10px",
+                              transition: "all 0.2s"
+                            }}
+                          >
                             <div>
-                              <span style={{ fontSize: "12px", fontWeight: "700" }}>{repo.fullName}</span>
-                              {repo.language && <span style={{ fontSize: "10px", color: "#6b7280", marginLeft: "8px" }}>● {repo.language}</span>}
+                              <span style={{ fontSize: "13px", fontWeight: "700", color: "#ffffff" }}>{repo.fullName}</span>
+                              {repo.language && <span style={{ fontSize: "11px", color: "#8a8a93", marginLeft: "10px" }}>● {repo.language}</span>}
                             </div>
-                            <span style={{ fontSize: "10px", color: "#10b981", fontWeight: "800", backgroundColor: "rgba(16,185,129,0.06)", padding: "2px 8px", borderRadius: "12px" }}>
+                            <span className="premium-badge badge-emerald">
                               Active
                             </span>
                           </div>
@@ -443,20 +457,20 @@ export default function EmployeeDashboard() {
                   </div>
 
                   {/* Recent Activity */}
-                  <div style={{ flex: "1 1 300px", backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h3 style={{ fontSize: "13px", fontWeight: "800", margin: "0 0 16px 0", borderBottom: "1px solid #1f2937", paddingBottom: "10px" }}>Recent Team Activity</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ flex: "1 1 300px" }}>
+                    <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 20px 0", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", paddingBottom: "12px", color: "#ffffff", letterSpacing: "-0.01em" }}>Recent Team Activity</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                       {activity?.length === 0 ? (
-                        <div style={{ fontSize: "12px", color: "#6b7280", padding: "10px 0" }}>No recent commits analyzed yet.</div>
+                        <div style={{ fontSize: "13px", color: "#8a8a93", padding: "12px 0" }}>No recent commits analyzed yet.</div>
                       ) : (
                         activity?.map((act) => (
-                          <div key={act._id} style={{ display: "flex", gap: "10px" }}>
-                            <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#06b6d4", marginTop: "5px", flexShrink: 0 }} />
+                          <div key={act._id} style={{ display: "flex", gap: "12px" }}>
+                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#00f2fe", marginTop: "5px", flexShrink: 0, boxShadow: "0 0 8px #00f2fe" }} />
                             <div>
-                              <p style={{ fontSize: "12px", margin: 0, fontWeight: "700" }}>
-                                <strong>{act.developer}</strong>: {act.message}
+                              <p style={{ fontSize: "13px", margin: 0, fontWeight: "600", color: "#d1d5db", lineHeight: "1.4" }}>
+                                <strong style={{ color: "#ffffff" }}>{act.developer}</strong>: {act.message}
                               </p>
-                              <span style={{ fontSize: "10px", color: "#6b7280" }}>
+                              <span style={{ fontSize: "11px", color: "#8a8a93", display: "block", marginTop: "4px" }}>
                                 in {act.repository} • {new Date(act.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
@@ -471,41 +485,39 @@ export default function EmployeeDashboard() {
 
             {/* 2. INVITATIONS */}
             {activeTab === "invitations" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Project Invitations</h3>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Project Invitations</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {projects?.length === 0 ? (
-                    <div style={{ padding: "40px", backgroundColor: "#111827", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>
+                    <div style={{ padding: "40px", textAlign: "center", color: "#8a8a93" }} className="premium-card">
                       No active projects. Ask your company owner to invite you.
                     </div>
                   ) : (
                     projects.map((project) => (
-                      <div key={project._id} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+                      <div key={project._id} className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
                           <div>
-                            <h4 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 4px 0" }}>{project.name}</h4>
-                            <span style={{ fontSize: "11px", color: "#6366f1", backgroundColor: "rgba(99,102,241,0.06)", padding: "2px 8px", borderRadius: "6px" }}>
+                            <h4 style={{ fontSize: "16px", fontWeight: "700", margin: "0 0 6px 0", color: "#ffffff" }}>{project.name}</h4>
+                            <span className="premium-badge badge-purple">
                               {project.githubRepo}
                             </span>
                           </div>
-                          <span style={{ fontSize: "10px", color: "#10b981", backgroundColor: "rgba(16,185,129,0.08)", padding: "3px 10px", borderRadius: "12px", fontWeight: "800" }}>
+                          <span className="premium-badge badge-emerald">
                             Assigned
                           </span>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px", fontSize: "12px", color: "#9ca3af" }}>
-                          <div><strong>Workspace Manager:</strong> {project.manager}</div>
-                          <div><strong>Timeline Expected:</strong> Q3 Release</div>
-                          <div><strong>Stack:</strong> {project.techStack.join(", ")}</div>
-                          <div><strong>Doc Coverage:</strong> {project.knowledgeScore}%</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px", fontSize: "13px", color: "#a1a1aa" }}>
+                          <div><strong>Workspace Manager:</strong> <span style={{ color: "#ffffff" }}>{project.manager}</span></div>
+                          <div><strong>Timeline Expected:</strong> <span style={{ color: "#ffffff" }}>Q3 Release</span></div>
+                          <div><strong>Stack:</strong> <span style={{ color: "#ffffff" }}>{project.techStack.join(", ")}</span></div>
+                          <div><strong>Doc Coverage:</strong> <span style={{ color: "#00f2fe" }}>{project.knowledgeScore}%</span></div>
                         </div>
 
                         <div style={{ display: "flex", gap: "10px" }}>
                           <button
-                            style={{
-                              backgroundColor: "#06b6d4", border: "none", color: "#fff",
-                              padding: "8px 16px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "default"
-                            }}
+                            className="premium-btn"
+                            style={{ cursor: "default", opacity: 0.9 }}
                           >
                             ✓ Active Member
                           </button>
@@ -519,53 +531,53 @@ export default function EmployeeDashboard() {
 
             {/* 👥 TEAM PAGE */}
             {activeTab === "team" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 4px 0" }}>👥 Team Collaboration Workspace</h3>
-                <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 24px 0" }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>👥 Team Collaboration Workspace</h3>
+                <p style={{ fontSize: "13px", color: "#8a8a93", margin: "0 0 24px 0" }}>
                   Teammates sharing repository permissions under the {profile?.companyName} organization.
                 </p>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
                   {teammates?.map((member) => (
                     <div
                       key={member._id}
+                      className="premium-card"
+                      onMouseMove={handleCardMouseMove}
                       style={{
-                        backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px",
-                        padding: "20px", display: "flex", flexDirection: "column", justify: "space-between", gap: "16px"
+                        display: "flex", flexDirection: "column", justify: "space-between", gap: "20px"
                       }}
                     >
                       <div>
                         {/* Member Header */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
                           <div style={{
-                            width: "42px", height: "42px", borderRadius: "50%",
-                            background: "linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)",
-                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "800", color: "#fff"
+                            width: "44px", height: "44px", borderRadius: "50%",
+                            background: "linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)",
+                            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: "800", color: "#000",
+                            boxShadow: "0 0 10px rgba(0,242,254,0.15)"
                           }}>
                             {member.name.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <h4 style={{ fontSize: "13px", fontWeight: "800", margin: 0 }}>{member.name}</h4>
-                            <span style={{ fontSize: "10px", color: "#6b7280" }}>{member.designation}</span>
+                            <h4 style={{ fontSize: "14px", fontWeight: "700", margin: 0, color: "#ffffff" }}>{member.name}</h4>
+                            <span style={{ fontSize: "12px", color: "#8a8a93" }}>{member.designation}</span>
                           </div>
                         </div>
 
                         {/* Stats */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "11px", color: "#9ca3af", marginBottom: "16px" }}>
-                          <div>🔥 <strong>Knowledge:</strong> {member.knowledgeScore}%</div>
-                          <div>💻 <strong>Commits:</strong> {member.totalCommits}</div>
-                          <div>📝 <strong>PRs:</strong> {member.prs}</div>
-                          <div>💬 <strong>Status:</strong> <span style={{ color: member.status === "online" ? "#10b981" : "#6b7280" }}>{member.status}</span></div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "12px", color: "#a1a1aa", marginBottom: "20px" }}>
+                          <div>🔥 <strong>Knowledge:</strong> <span style={{ color: "#ffffff" }}>{member.knowledgeScore}%</span></div>
+                          <div>💻 <strong>Commits:</strong> <span style={{ color: "#ffffff" }}>{member.totalCommits}</span></div>
+                          <div>📝 <strong>PRs:</strong> <span style={{ color: "#ffffff" }}>{member.prs}</span></div>
+                          <div>💬 <strong>Status:</strong> <span className={`premium-badge ${member.status === "online" ? "badge-emerald" : "badge-purple"}`}>{member.status}</span></div>
                         </div>
                       </div>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         <button
                           onClick={() => setSelectedTeammateId(member._id)}
-                          style={{
-                            width: "100%", backgroundColor: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.15)",
-                            color: "#06b6d4", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer"
-                          }}
+                          className="premium-btn premium-btn-primary"
+                          style={{ width: "100%", padding: "10px", fontSize: "12px" }}
                         >
                           View Detailed Profile
                         </button>
@@ -574,10 +586,8 @@ export default function EmployeeDashboard() {
                             setChatQuery(`Who owns Checkout? Tell me about ${member.name}'s contributions.`);
                             setActiveTab("chat");
                           }}
-                          style={{
-                            width: "100%", backgroundColor: "transparent", border: "1px solid #374151",
-                            color: "#9ca3af", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer"
-                          }}
+                          className="premium-btn"
+                          style={{ width: "100%", padding: "10px", fontSize: "12px" }}
                         >
                           AI Ask About Developer
                         </button>
@@ -590,24 +600,24 @@ export default function EmployeeDashboard() {
 
             {/* 3. MY PROJECTS */}
             {activeTab === "projects" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>My Assigned Projects</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>My Assigned Projects</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
                   {projects?.length === 0 ? (
-                    <div style={{ padding: "40px", backgroundColor: "#111827", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>
+                    <div style={{ padding: "40px", textAlign: "center", color: "#8a8a93" }} className="premium-card">
                       No projects assigned.
                     </div>
                   ) : (
                     projects?.map((project) => (
-                      <div key={project._id} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                        <h4 style={{ fontSize: "13px", fontWeight: "800", margin: "0 0 4px 0" }}>{project.name}</h4>
-                        <code style={{ fontSize: "10px", color: "#06b6d4", display: "block", marginBottom: "16px" }}>{project.githubRepo}</code>
+                      <div key={project._id} className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                        <h4 style={{ fontSize: "15px", fontWeight: "700", margin: "0 0 6px 0", color: "#ffffff" }}>{project.name}</h4>
+                        <code style={{ fontSize: "12px", color: "#00f2fe", display: "block", marginBottom: "16px" }}>{project.githubRepo}</code>
                         
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "11px", color: "#9ca3af", marginBottom: "16px" }}>
-                          <div>📅 <strong>Sprint:</strong> {project.currentSprint}</div>
-                          <div>📊 <strong>Tech:</strong> {project.techStack.join(", ")}</div>
-                          <div>🔧 <strong>Health Score:</strong> {project.progress}%</div>
-                          <div>💡 <strong>Knowledge coverage:</strong> {project.knowledgeScore}%</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "12px", color: "#a1a1aa", marginBottom: "20px" }}>
+                          <div>📅 <strong>Sprint:</strong> <span style={{ color: "#ffffff" }}>{project.currentSprint}</span></div>
+                          <div>📊 <strong>Tech:</strong> <span style={{ color: "#ffffff" }}>{project.techStack.join(", ")}</span></div>
+                          <div>🔧 <strong>Health Score:</strong> <span style={{ color: "#ffffff" }}>{project.progress}%</span></div>
+                          <div>💡 <strong>Knowledge coverage:</strong> <span style={{ color: "#ffffff" }}>{project.knowledgeScore}%</span></div>
                         </div>
 
                         <button
@@ -615,10 +625,8 @@ export default function EmployeeDashboard() {
                             setSelectedRepo(repositories.find(r => r.fullName === project.githubRepo) || null);
                             setActiveTab("repositories");
                           }}
-                          style={{
-                            width: "100%", backgroundColor: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.15)",
-                            color: "#06b6d4", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer"
-                          }}
+                          className="premium-btn premium-btn-primary"
+                          style={{ width: "100%", padding: "10px", fontSize: "12px" }}
                         >
                           Explore Repository
                         </button>
@@ -631,25 +639,20 @@ export default function EmployeeDashboard() {
 
             {/* 4. MY REPOSITORIES */}
             {activeTab === "repositories" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Repository Explorer</h3>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Repository Explorer</h3>
                 
-                <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
                   {/* Repo list */}
-                  <div style={{ flex: "1 1 220px", backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#6b7280", margin: "0 0 12px 0" }}>Select Repository</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ flex: "1 1 220px", height: "fit-content" }}>
+                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#8a8a93", margin: "0 0 16px 0", fontWeight: "700", letterSpacing: "0.08em" }}>Select Repository</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {repositories?.map((repo) => (
                         <button
                           key={repo._id}
                           onClick={() => { setSelectedRepo(repo); setSelectedFile(null); }}
-                          style={{
-                            display: "block", width: "100%", border: "none", padding: "8px 12px",
-                            borderRadius: "6px", fontSize: "11px", textAlign: "left", cursor: "pointer",
-                            backgroundColor: selectedRepo?._id === repo._id ? "rgba(6,182,212,0.08)" : "transparent",
-                            color: selectedRepo?._id === repo._id ? "#06b6d4" : "#9ca3af",
-                            fontWeight: selectedRepo?._id === repo._id ? "700" : "600"
-                          }}
+                          className={`sidebar-link ${selectedRepo?._id === repo._id ? "active" : ""}`}
+                          style={{ padding: "10px 14px", fontSize: "12px" }}
                         >
                           {repo.fullName}
                         </button>
@@ -659,20 +662,20 @@ export default function EmployeeDashboard() {
 
                   {/* File Explorer & Viewer */}
                   {selectedRepo ? (
-                    <div style={{ flex: "3 1 500px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                    <div style={{ flex: "3 1 500px", display: "flex", flexDirection: "column", gap: "24px" }}>
                       {/* Repo Owner & Contributors block */}
-                      <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                        <h4 style={{ fontSize: "12px", fontWeight: "800", color: "#06b6d4", margin: "0 0 12px 0" }}>
+                      <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                        <h4 style={{ fontSize: "14px", fontWeight: "800", color: "#00f2fe", margin: "0 0 16px 0", letterSpacing: "-0.01em" }}>
                           Repository Owner & Leadership
                         </h4>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "11px", color: "#9ca3af" }}>
-                          <div>👑 <strong>Owner:</strong> {repoOwnership?.owner}</div>
-                          <div>🔥 <strong>AI Knowledge Leader:</strong> {repoOwnership?.aiKnowledgeLeader}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px", color: "#a1a1aa", marginBottom: "20px" }}>
+                          <div>👑 <strong>Owner:</strong> <span style={{ color: "#ffffff" }}>{repoOwnership?.owner}</span></div>
+                          <div>🔥 <strong>AI Knowledge Leader:</strong> <span style={{ color: "#ffffff" }}>{repoOwnership?.aiKnowledgeLeader}</span></div>
                         </div>
 
                         {/* Repository Members */}
-                        <div style={{ marginTop: "16px" }}>
-                          <span style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "8px" }}>
+                        <div style={{ marginTop: "16px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "16px" }}>
+                          <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#8a8a93", display: "block", marginBottom: "12px", letterSpacing: "0.05em" }}>
                             Repository Teammates ({repoMembers?.length || 0})
                           </span>
                           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -680,10 +683,8 @@ export default function EmployeeDashboard() {
                               <span
                                 key={m._id}
                                 onClick={() => setSelectedTeammateId(m._id)}
-                                style={{
-                                  fontSize: "11px", color: "#06b6d4", backgroundColor: "rgba(6,182,212,0.06)",
-                                  padding: "3px 10px", borderRadius: "12px", cursor: "pointer", fontWeight: "700"
-                                }}
+                                className="premium-badge badge-cyan"
+                                style={{ cursor: "pointer", padding: "4px 12px", fontSize: "12px", textTransform: "none" }}
                               >
                                 @{m.githubUsername || m.name.split(" ")[0]}
                               </span>
@@ -692,14 +693,14 @@ export default function EmployeeDashboard() {
                         </div>
                       </div>
 
-                      <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                        <div style={{ display: "flex", justify: "space-between", borderBottom: "1px solid #1f2937", paddingBottom: "12px", marginBottom: "16px" }}>
-                          <span style={{ fontSize: "13px", fontWeight: "800" }}>{selectedRepo.fullName}</span>
-                          <span style={{ fontSize: "11px", color: "#6b7280" }}>Health Score: {selectedRepo.docHealthScore}%</span>
+                      <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", paddingBottom: "16px", marginBottom: "20px" }}>
+                          <span style={{ fontSize: "15px", fontWeight: "800", color: "#ffffff" }}>{selectedRepo.fullName}</span>
+                          <span className="premium-badge badge-purple" style={{ fontSize: "11px" }}>Health: {selectedRepo.docHealthScore}%</span>
                         </div>
 
                         {/* Files list */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                           {[
                             { name: "server/app.js", desc: "Core Express app server setup and route configuration bindings" },
                             { name: "server/controllers/authController.js", desc: "SSO and passwordless employee authentication controllers" },
@@ -711,15 +712,17 @@ export default function EmployeeDashboard() {
                               onClick={() => setSelectedFile(f)}
                               style={{
                                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                                padding: "10px 14px", border: "1px solid #1f2937", borderRadius: "8px", cursor: "pointer",
-                                backgroundColor: selectedFile?.name === f.name ? "rgba(255,255,255,0.02)" : "#0a0f1e"
+                                padding: "14px 18px", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "10px", cursor: "pointer",
+                                backgroundColor: selectedFile?.name === f.name ? "rgba(0, 242, 254, 0.04)" : "rgba(255, 255, 255, 0.01)",
+                                borderColor: selectedFile?.name === f.name ? "#00f2fe" : "rgba(255, 255, 255, 0.05)",
+                                transition: "all 0.2s"
                               }}
                             >
                               <div>
-                                <div style={{ fontSize: "12px", fontWeight: "700", color: "#f3f4f6" }}>{f.name}</div>
-                                <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "2px" }}>{f.desc}</div>
+                                <div style={{ fontSize: "13px", fontWeight: "700", color: selectedFile?.name === f.name ? "#00f2fe" : "#ffffff" }}>{f.name}</div>
+                                <div style={{ fontSize: "11px", color: "#8a8a93", marginTop: "4px" }}>{f.desc}</div>
                               </div>
-                              <span style={{ fontSize: "10px", color: "#06b6d4" }}>AI Explained</span>
+                              <span className="premium-badge badge-cyan" style={{ textTransform: "none" }}>AI Explained</span>
                             </div>
                           ))}
                         </div>
@@ -727,26 +730,23 @@ export default function EmployeeDashboard() {
 
                       {/* File Details Panel */}
                       {selectedFile && (
-                        <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                          <h4 style={{ fontSize: "13px", fontWeight: "800", margin: "0 0 12px 0" }}>Smart Code Viewer: {selectedFile.name}</h4>
+                        <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                          <h4 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 16px 0", color: "#ffffff" }}>Smart Code Viewer: {selectedFile.name}</h4>
                           
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-                            <div style={{ backgroundColor: "#0a0f1e", padding: "12px", borderRadius: "8px" }}>
-                              <div style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700", marginBottom: "4px" }}>File Purpose</div>
-                              <p style={{ fontSize: "12px", margin: 0, color: "#d1d5db" }}>Handles request routing flow and hydration parameters safely.</p>
+                            <div style={{ backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.04)", padding: "14px", borderRadius: "10px" }}>
+                              <div style={{ fontSize: "11px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px", letterSpacing: "0.05em" }}>File Purpose</div>
+                              <p style={{ fontSize: "13px", margin: 0, color: "#d1d5db", lineHeight: "1.4" }}>Handles request routing flow and hydration parameters safely.</p>
                             </div>
-                            <div style={{ backgroundColor: "#0a0f1e", padding: "12px", borderRadius: "8px" }}>
-                              <div style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700", marginBottom: "4px" }}>Risk level</div>
-                              <p style={{ fontSize: "12px", margin: 0, color: "#10b981" }}>Low Risk. Scoped cleanly.</p>
+                            <div style={{ backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.04)", padding: "14px", borderRadius: "10px" }}>
+                              <div style={{ fontSize: "11px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px", letterSpacing: "0.05em" }}>Risk level</div>
+                              <p style={{ fontSize: "13px", margin: 0, color: "#10b981", fontWeight: "600" }}>Low Risk. Scoped cleanly.</p>
                             </div>
                           </div>
 
                           <button
                             onClick={() => { setWorkspaceTarget(selectedFile.name); handleWorkspaceExplain(selectedFile.name); setActiveTab("workspace"); }}
-                            style={{
-                              backgroundColor: "#06b6d4", border: "none", color: "#fff",
-                              padding: "8px 16px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer"
-                            }}
+                            className="premium-btn premium-btn-primary"
                           >
                             Inspect in AI Workspace
                           </button>
@@ -754,7 +754,7 @@ export default function EmployeeDashboard() {
                       )}
                     </div>
                   ) : (
-                    <div style={{ flex: "3 1 500px", padding: "40px", backgroundColor: "#111827", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>
+                    <div style={{ flex: "3 1 500px", padding: "48px", textAlign: "center", color: "#8a8a93" }} className="premium-card">
                       Select a repository to explore files and commit rationales.
                     </div>
                   )}
@@ -764,30 +764,25 @@ export default function EmployeeDashboard() {
 
             {/* 5. AI WORKSPACE */}
             {activeTab === "workspace" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>AI Workspace Inspector</h3>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>AI Workspace Inspector</h3>
                 
-                <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "24px", marginBottom: "20px" }}>
-                  <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "8px" }}>
+                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px", marginBottom: "24px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#8a8a93", display: "block", marginBottom: "10px", letterSpacing: "0.08em" }}>
                     Select Target Node (File, Folder, Commit or Branch)
                   </label>
-                  <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ display: "flex", gap: "12px" }}>
                     <input
                       type="text"
                       placeholder="e.g. server/controllers/authController.js"
                       value={workspaceTarget}
                       onChange={(e) => setWorkspaceTarget(e.target.value)}
-                      style={{
-                        flex: 1, backgroundColor: "#0a0f1e", border: "1px solid #374151",
-                        borderRadius: "8px", padding: "10px 14px", color: "#fff", fontSize: "12px", outline: "none"
-                      }}
+                      className="premium-input"
                     />
                     <button
                       onClick={() => handleWorkspaceExplain(workspaceTarget)}
-                      style={{
-                        backgroundColor: "#06b6d4", border: "none", color: "#fff",
-                        padding: "10px 20px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer"
-                      }}
+                      className="premium-btn premium-btn-primary"
+                      style={{ whiteSpace: "nowrap" }}
                     >
                       Analyze Target
                     </button>
@@ -800,23 +795,23 @@ export default function EmployeeDashboard() {
                   </div>
                 ) : workspaceAnalysis ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-                      <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                        <div style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px" }}>Purpose</div>
-                        <p style={{ fontSize: "12px", color: "#d1d5db", margin: 0 }}>{workspaceAnalysis.purpose}</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+                      <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "20px" }}>
+                        <div style={{ fontSize: "11px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", marginBottom: "8px", letterSpacing: "0.05em" }}>Purpose</div>
+                        <p style={{ fontSize: "13px", color: "#d1d5db", margin: 0, lineHeight: "1.5" }}>{workspaceAnalysis.purpose}</p>
                       </div>
-                      <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                        <div style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px" }}>Logical rationale</div>
-                        <p style={{ fontSize: "12px", color: "#d1d5db", margin: 0 }}>{workspaceAnalysis.logic}</p>
+                      <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "20px" }}>
+                        <div style={{ fontSize: "11px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", marginBottom: "8px", letterSpacing: "0.05em" }}>Logical rationale</div>
+                        <p style={{ fontSize: "13px", color: "#d1d5db", margin: 0, lineHeight: "1.5" }}>{workspaceAnalysis.logic}</p>
                       </div>
-                      <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                        <div style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px" }}>Business Reason</div>
-                        <p style={{ fontSize: "12px", color: "#d1d5db", margin: 0 }}>{workspaceAnalysis.businessReason}</p>
+                      <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "20px" }}>
+                        <div style={{ fontSize: "11px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", marginBottom: "8px", letterSpacing: "0.05em" }}>Business Reason</div>
+                        <p style={{ fontSize: "13px", color: "#d1d5db", margin: 0, lineHeight: "1.5" }}>{workspaceAnalysis.businessReason}</p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ padding: "40px", backgroundColor: "#111827", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>
+                  <div style={{ padding: "48px", textAlign: "center", color: "#8a8a93" }} className="premium-card">
                     Enter any folder path or file to trigger deep semantic AI context analyzer.
                   </div>
                 )}
@@ -825,26 +820,29 @@ export default function EmployeeDashboard() {
 
             {/* 6. AI CHAT */}
             {activeTab === "chat" && (
-              <div style={{ height: "calc(100vh - 120px)", display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", justify: "space-between", borderBottom: "1px solid #1f2937", paddingBottom: "12px", marginBottom: "16px" }}>
-                  <h3 style={{ fontSize: "16px", fontWeight: "900", margin: 0 }}>Workspace AI Chat</h3>
-                  <span style={{ fontSize: "11px", color: "#6b7280" }}>SSO scope enabled</span>
+              <div style={{ height: "calc(100vh - 140px)", display: "flex", flexDirection: "column" }} className="animate-slide-up">
+                <div style={{ display: "flex", justify: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", paddingBottom: "16px", marginBottom: "20px" }}>
+                  <h3 style={{ fontSize: "18px", fontWeight: "800", margin: 0, letterSpacing: "-0.02em" }}>Workspace AI Chat</h3>
+                  <span className="premium-badge badge-emerald">SSO scope enabled</span>
                 </div>
 
                 {/* Messages area */}
-                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", paddingRight: "8px", marginBottom: "16px" }}>
+                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px", paddingRight: "8px", marginBottom: "20px" }}>
                   {chatMessages.map((msg, index) => (
                     <div
                       key={index}
                       style={{
                         alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                        maxWidth: "80%",
-                        backgroundColor: msg.role === "user" ? "#06b6d4" : "#111827",
-                        color: msg.role === "user" ? "#fff" : "#d1d5db",
-                        padding: "10px 14px",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                        lineHeight: "1.5"
+                        maxWidth: "75%",
+                        background: msg.role === "user" ? "linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)" : "rgba(255, 255, 255, 0.02)",
+                        border: msg.role === "user" ? "none" : "1px solid rgba(255, 255, 255, 0.05)",
+                        color: msg.role === "user" ? "#000000" : "#d1d5db",
+                        padding: "14px 18px",
+                        borderRadius: "14px",
+                        fontSize: "13px",
+                        lineHeight: "1.6",
+                        fontWeight: msg.role === "user" ? "600" : "400",
+                        boxShadow: msg.role === "user" ? "0 4px 15px rgba(0, 242, 254, 0.15)" : "none"
                       }}
                     >
                       {msg.text}
@@ -853,23 +851,18 @@ export default function EmployeeDashboard() {
                 </div>
 
                 {/* Chat input */}
-                <form onSubmit={handleSendChat} style={{ display: "flex", gap: "10px" }}>
+                <form onSubmit={handleSendChat} style={{ display: "flex", gap: "12px" }}>
                   <input
                     type="text"
                     placeholder="Explain Auth Flow or SQL parameters..."
                     value={chatQuery}
                     onChange={(e) => setChatQuery(e.target.value)}
-                    style={{
-                      flex: 1, backgroundColor: "#111827", border: "1px solid #374151",
-                      borderRadius: "8px", padding: "12px 16px", color: "#fff", fontSize: "12px", outline: "none"
-                    }}
+                    className="premium-input"
                   />
                   <button
                     type="submit"
-                    style={{
-                      backgroundColor: "#06b6d4", border: "none", color: "#fff",
-                      padding: "0 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer"
-                    }}
+                    className="premium-btn premium-btn-primary"
+                    style={{ padding: "0 24px" }}
                   >
                     <Send size={15} />
                   </button>
@@ -879,24 +872,24 @@ export default function EmployeeDashboard() {
 
             {/* 7. KNOWLEDGE HUB */}
             {activeTab === "hub" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Knowledge Hub</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#06b6d4", margin: "0 0 8px 0" }}>System Architecture</h4>
-                    <p style={{ fontSize: "12px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Knowledge Hub</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "14px", fontWeight: "800", color: "#00f2fe", margin: "0 0 10px 0" }}>System Architecture</h4>
+                    <p style={{ fontSize: "13px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
                       {knowledge?.architecture}
                     </p>
                   </div>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#06b6d4", margin: "0 0 8px 0" }}>Business Logic</h4>
-                    <p style={{ fontSize: "12px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "14px", fontWeight: "800", color: "#00f2fe", margin: "0 0 10px 0" }}>Business Logic</h4>
+                    <p style={{ fontSize: "13px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
                       {knowledge?.businessLogic}
                     </p>
                   </div>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#06b6d4", margin: "0 0 8px 0" }}>Design Decisions</h4>
-                    <p style={{ fontSize: "12px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "14px", fontWeight: "800", color: "#00f2fe", margin: "0 0 10px 0" }}>Design Decisions</h4>
+                    <p style={{ fontSize: "13px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
                       {knowledge?.designDecisions}
                     </p>
                   </div>
@@ -906,26 +899,22 @@ export default function EmployeeDashboard() {
 
             {/* 8. DOCUMENTATION */}
             {activeTab === "docs" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Interactive API Documentation</h3>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Interactive API Documentation</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {[
                     { method: "POST", path: "/api/auth/employee-login", desc: "Passwordless workspace login key validation" },
                     { method: "GET", path: "/api/employee/stats", desc: "Calculates total commits and active repository scores" },
                     { method: "GET", path: "/api/repositories/github-list", desc: "List candidate repos from linked GitHub profile" }
                   ].map((api) => (
-                    <div key={api.path} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                        <span style={{
-                          fontSize: "10px", fontWeight: "900", padding: "3px 8px", borderRadius: "6px",
-                          backgroundColor: api.method === "POST" ? "rgba(139,92,246,0.08)" : "rgba(16,185,129,0.08)",
-                          color: api.method === "POST" ? "#8b5cf6" : "#10b981"
-                        }}>
+                    <div key={api.path} className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "20px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
+                        <span className={`premium-badge ${api.method === "POST" ? "badge-purple" : "badge-emerald"}`}>
                           {api.method}
                         </span>
-                        <code style={{ fontSize: "12px", color: "#fff" }}>{api.path}</code>
+                        <code style={{ fontSize: "13px", color: "#ffffff", fontWeight: "600" }}>{api.path}</code>
                       </div>
-                      <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>{api.desc}</p>
+                      <p style={{ fontSize: "12px", color: "#8a8a93", margin: 0 }}>{api.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -934,20 +923,17 @@ export default function EmployeeDashboard() {
 
             {/* 9. CODE SEARCH */}
             {activeTab === "search" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Semantic Code Search</h3>
-                <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Semantic Code Search</h3>
+                <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
                   <input
                     type="text"
                     placeholder="e.g. JWT token middleware verify..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      flex: 1, backgroundColor: "#111827", border: "1px solid #374151",
-                      borderRadius: "8px", padding: "10px 14px", color: "#fff", fontSize: "12px", outline: "none"
-                    }}
+                    className="premium-input"
                   />
-                  <button type="submit" style={{ backgroundColor: "#06b6d4", border: "none", color: "#fff", padding: "0 20px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
+                  <button type="submit" className="premium-btn premium-btn-primary" style={{ whiteSpace: "nowrap" }}>
                     Search
                   </button>
                 </form>
@@ -959,17 +945,17 @@ export default function EmployeeDashboard() {
                 ) : searchResults ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     {searchResults.map((res) => (
-                      <div key={res.path} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                        <div style={{ fontSize: "10px", color: "#6b7280", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px" }}>{res.type}</div>
-                        <code style={{ fontSize: "11px", color: "#06b6d4" }}>{res.path}</code>
-                        <div style={{ marginTop: "10px", backgroundColor: "#0a0f1e", padding: "8px 12px", borderRadius: "6px" }}>
-                          {res.matches.map((m, i) => <pre key={i} style={{ fontSize: "11px", margin: 0, color: "#fff" }}>{m}</pre>)}
+                      <div key={res.path} className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "20px" }}>
+                        <div className="premium-badge badge-purple" style={{ marginBottom: "10px" }}>{res.type}</div>
+                        <code style={{ fontSize: "13px", color: "#00f2fe", display: "block", marginBottom: "10px" }}>{res.path}</code>
+                        <div style={{ backgroundColor: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.05)", padding: "14px", borderRadius: "8px", overflowX: "auto" }}>
+                          {res.matches.map((m, i) => <pre key={i} style={{ fontSize: "12px", margin: 0, color: "#ffffff", fontFamily: "monospace" }}>{m}</pre>)}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div style={{ padding: "40px", backgroundColor: "#111827", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>
+                  <div style={{ padding: "48px", textAlign: "center", color: "#8a8a93" }} className="premium-card">
                     Run semantic queries to search logic blocks across all workspaces.
                   </div>
                 )}
@@ -978,16 +964,19 @@ export default function EmployeeDashboard() {
 
             {/* 10. DEPENDENCY GRAPH */}
             {activeTab === "graph" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 4px 0" }}>Dependency Graph</h3>
-                <p style={{ fontSize: "12px", color: "#6b7280", margin: "0 0 20px 0" }}>Click on any microservice block to audit owner nodes and risk telemetry.</p>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>Dependency Graph</h3>
+                <p style={{ fontSize: "13px", color: "#8a8a93", margin: "0 0 24px 0" }}>Click on any microservice block to audit owner nodes and risk telemetry.</p>
 
-                <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-                  <div style={{
-                    flex: "2 1 400px", backgroundColor: "#111827", border: "1px solid #1f2937",
-                    borderRadius: "12px", padding: "24px", display: "flex", flexDirection: "column",
-                    alignItems: "center", gap: "16px", minHeight: "300px", justifyContent: "center"
-                  }}>
+                <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                  <div 
+                    className="premium-card" 
+                    onMouseMove={handleCardMouseMove}
+                    style={{
+                      flex: "2 1 400px", display: "flex", flexDirection: "column",
+                      alignItems: "center", gap: "16px", minHeight: "320px", justifyContent: "center"
+                    }}
+                  >
                     {[
                       { id: "front", label: "Vite Client SPA", type: "Frontend" },
                       { id: "gateway", label: "SSO Gateway", type: "Security" },
@@ -998,30 +987,36 @@ export default function EmployeeDashboard() {
                         key={node.id}
                         onClick={() => setSelectedNode(node)}
                         style={{
-                          width: "180px", backgroundColor: "#0a0f1e", border: "1px solid #374151",
-                          borderRadius: "8px", padding: "12px", textAlign: "center", cursor: "pointer",
-                          borderColor: selectedNode?.id === node.id ? "#06b6d4" : "#374151"
+                          width: "200px", 
+                          backgroundColor: selectedNode?.id === node.id ? "rgba(0, 242, 254, 0.05)" : "rgba(255,255,255,0.01)", 
+                          border: "1px solid",
+                          borderColor: selectedNode?.id === node.id ? "#00f2fe" : "rgba(255, 255, 255, 0.08)",
+                          borderRadius: "10px", 
+                          padding: "14px", 
+                          textAlign: "center", 
+                          cursor: "pointer",
+                          transition: "all 0.2s"
                         }}
                       >
-                        <div style={{ fontSize: "12px", fontWeight: "700" }}>{node.label}</div>
-                        <div style={{ fontSize: "9px", color: "#6b7280", textTransform: "uppercase", marginTop: "4px" }}>{node.type}</div>
+                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#ffffff" }}>{node.label}</div>
+                        <div style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", marginTop: "6px", fontWeight: "700" }}>{node.type}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div style={{ flex: "1 1 240px", backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#6b7280", margin: "0 0 12px 0" }}>Node Inspector</h4>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ flex: "1 1 240px", height: "fit-content" }}>
+                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#8a8a93", margin: "0 0 16px 0", letterSpacing: "0.05em", fontWeight: "700" }}>Node Inspector</h4>
                     {selectedNode ? (
                       <div>
-                        <h5 style={{ fontSize: "13px", fontWeight: "900", margin: "0 0 8px 0" }}>{selectedNode.label}</h5>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "11px" }}>
-                          <div>👥 <strong>Owner:</strong> {profile?.name || "Saavi"}</div>
-                          <div>🔧 <strong>Last modified:</strong> 2 hours ago</div>
-                          <div>⚠️ <strong>Risk Level:</strong> low risk</div>
+                        <h5 style={{ fontSize: "15px", fontWeight: "800", margin: "0 0 12px 0", color: "#ffffff" }}>{selectedNode.label}</h5>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "12px", color: "#a1a1aa" }}>
+                          <div>👥 <strong>Owner:</strong> <span style={{ color: "#ffffff" }}>{profile?.name || "Saavi"}</span></div>
+                          <div>🔧 <strong>Last modified:</strong> <span style={{ color: "#ffffff" }}>2 hours ago</span></div>
+                          <div>⚠️ <strong>Risk Level:</strong> <span className="premium-badge badge-emerald">low risk</span></div>
                         </div>
                       </div>
                     ) : (
-                      <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>Click any graph block to audit its properties.</p>
+                      <p style={{ fontSize: "12px", color: "#8a8a93", margin: 0 }}>Click any graph block to audit its properties.</p>
                     )}
                   </div>
                 </div>
@@ -1030,24 +1025,24 @@ export default function EmployeeDashboard() {
 
             {/* 11. MY ANALYTICS */}
             {activeTab === "analytics" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Personal Engineering Growth</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px", marginBottom: "20px" }}>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#6b7280", margin: "0 0 12px 0" }}>Total Commits</h4>
-                    <span style={{ fontSize: "28px", fontWeight: "900" }}>{analytics?.commits}</span>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Personal Engineering Growth</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "24px" }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#8a8a93", margin: "0 0 12px 0", fontWeight: "700", letterSpacing: "0.05em" }}>Total Commits</h4>
+                    <span style={{ fontSize: "36px", fontWeight: "800", color: "#ffffff" }}>{analytics?.commits}</span>
                   </div>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#6b7280", margin: "0 0 12px 0" }}>PRs Completed</h4>
-                    <span style={{ fontSize: "28px", fontWeight: "900" }}>{analytics?.prs}</span>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#8a8a93", margin: "0 0 12px 0", fontWeight: "700", letterSpacing: "0.05em" }}>PRs Completed</h4>
+                    <span style={{ fontSize: "36px", fontWeight: "800", color: "#ffffff" }}>{analytics?.prs}</span>
                   </div>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#6b7280", margin: "0 0 12px 0" }}>Lines of Code Added</h4>
-                    <span style={{ fontSize: "28px", fontWeight: "900" }}>{analytics?.linesAdded}</span>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#8a8a93", margin: "0 0 12px 0", fontWeight: "700", letterSpacing: "0.05em" }}>Lines Added</h4>
+                    <span style={{ fontSize: "36px", fontWeight: "800", color: "#ffffff" }}>{analytics?.linesAdded}</span>
                   </div>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#6b7280", margin: "0 0 12px 0" }}>AI Suggestions Accepted</h4>
-                    <span style={{ fontSize: "28px", fontWeight: "900" }}>{analytics?.aiSuggestionsAccepted}%</span>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove}>
+                    <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "#8a8a93", margin: "0 0 12px 0", fontWeight: "700", letterSpacing: "0.05em" }}>AI Suggestions Accepted</h4>
+                    <span style={{ fontSize: "36px", fontWeight: "800", color: "#ffffff" }}>{analytics?.aiSuggestionsAccepted}%</span>
                   </div>
                 </div>
               </div>
@@ -1055,24 +1050,24 @@ export default function EmployeeDashboard() {
 
             {/* 12. CHANGE TIMELINE */}
             {activeTab === "timeline" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Change Timeline</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Change Timeline</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                   {timeline?.length === 0 ? (
-                    <div style={{ padding: "40px", backgroundColor: "#111827", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>
+                    <div style={{ padding: "48px", textAlign: "center", color: "#8a8a93" }} className="premium-card">
                       No timeline elements found.
                     </div>
                   ) : (
                     timeline?.map((ver, i) => (
-                      <div key={i} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px" }}>
-                        <div style={{ display: "flex", justify: "space-between", marginBottom: "8px" }}>
-                          <span style={{ fontSize: "12px", fontWeight: "800", color: "#06b6d4" }}>{ver.version}</span>
-                          <span style={{ fontSize: "11px", color: "#6b7280" }}>{new Date(ver.date).toLocaleDateString()} by {ver.developer}</span>
+                      <div key={i} className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                        <div style={{ display: "flex", justify: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                          <span className="premium-badge badge-cyan" style={{ fontSize: "12px", textTransform: "none", padding: "4px 12px" }}>{ver.version}</span>
+                          <span style={{ fontSize: "12px", color: "#8a8a93" }}>{new Date(ver.date).toLocaleDateString()} by {ver.developer}</span>
                         </div>
-                        <p style={{ fontSize: "12px", color: "#d1d5db", margin: "0 0 10px 0" }}>{ver.reason}</p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "11px", color: "#6b7280", borderTop: "1px solid #1f2937", paddingTop: "8px" }}>
-                          <div>💼 <strong>Business Context:</strong> {ver.businessContext}</div>
-                          <div>🔧 <strong>Architecture:</strong> {ver.architectureDecision}</div>
+                        <p style={{ fontSize: "14px", color: "#ffffff", margin: "0 0 16px 0", lineHeight: "1.5" }}>{ver.reason}</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "12px", color: "#a1a1aa", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px" }}>
+                          <div>💼 <strong>Business Context:</strong> <span style={{ color: "#ffffff" }}>{ver.businessContext}</span></div>
+                          <div>🔧 <strong>Architecture:</strong> <span style={{ color: "#ffffff" }}>{ver.architectureDecision}</span></div>
                         </div>
                       </div>
                     ))
@@ -1083,23 +1078,19 @@ export default function EmployeeDashboard() {
 
             {/* 13. PULL REQUESTS */}
             {activeTab === "prs" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Pull Requests</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Pull Requests</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {[
                     { id: "#431", title: "Enterprise SSO Callback validation", status: "Needs Review", branch: "feature/sso-validation" },
                     { id: "#429", title: "Redis connection pool parameters setup", status: "Merged", branch: "hotfix/redis-pool" }
                   ].map((pr) => (
-                    <div key={pr.id} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={pr.id} className="premium-card" onMouseMove={handleCardMouseMove} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px" }}>
                       <div>
-                        <h4 style={{ fontSize: "12px", fontWeight: "700", color: "#fff", margin: "0 0 4px 0" }}>{pr.title}</h4>
-                        <span style={{ fontSize: "10px", color: "#6b7280" }}>{pr.id} • {pr.branch}</span>
+                        <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff", margin: "0 0 6px 0" }}>{pr.title}</h4>
+                        <span style={{ fontSize: "12px", color: "#8a8a93" }}>{pr.id} • <code style={{ color: "#00f2fe" }}>{pr.branch}</code></span>
                       </div>
-                      <span style={{
-                        fontSize: "9px", fontWeight: "900", padding: "3px 8px", borderRadius: "6px",
-                        backgroundColor: pr.status === "Merged" ? "rgba(16,185,129,0.06)" : "rgba(234,179,8,0.06)",
-                        color: pr.status === "Merged" ? "#10b981" : "#eab308"
-                      }}>
+                      <span className={`premium-badge ${pr.status === "Merged" ? "badge-emerald" : "badge-amber"}`} style={{ padding: "4px 12px" }}>
                         {pr.status}
                       </span>
                     </div>
@@ -1110,18 +1101,18 @@ export default function EmployeeDashboard() {
 
             {/* 14. ASSIGNED TASKS */}
             {activeTab === "tasks" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>My Assigned Tasks</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "20px" }}>
-                    <div style={{ display: "flex", justify: "space-between", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: "800" }}>CM-89: Verify passwordless employee route</span>
-                      <span style={{ fontSize: "10px", color: "#ef4444", fontWeight: "800" }}>High Priority</span>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>My Assigned Tasks</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "24px" }}>
+                    <div style={{ display: "flex", justify: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: "800", color: "#ffffff" }}>CM-89: Verify passwordless employee route</span>
+                      <span className="premium-badge badge-rose" style={{ padding: "4px 12px" }}>High Priority</span>
                     </div>
-                    <p style={{ fontSize: "12px", color: "#9ca3af", margin: "0 0 16px 0" }}>Ensure error codes match standard payload specifications.</p>
-                    <div style={{ borderTop: "1px solid #1f2937", paddingTop: "12px" }}>
-                      <div style={{ fontSize: "10px", color: "#06b6d4", textTransform: "uppercase", fontWeight: "700", marginBottom: "4px" }}>AI Suggested Files:</div>
-                      <code style={{ fontSize: "11px", color: "#d1d5db" }}>server/controllers/authController.js</code>
+                    <p style={{ fontSize: "13px", color: "#a1a1aa", margin: "0 0 20px 0", lineHeight: "1.5" }}>Ensure error codes match payload specifications cleanly.</p>
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "16px" }}>
+                      <div style={{ fontSize: "11px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", marginBottom: "6px", letterSpacing: "0.05em" }}>AI Suggested Files:</div>
+                      <code style={{ fontSize: "12px", color: "#00f2fe" }}>server/controllers/authController.js</code>
                     </div>
                   </div>
                 </div>
@@ -1130,21 +1121,21 @@ export default function EmployeeDashboard() {
 
             {/* 15. SETTINGS */}
             {activeTab === "settings" && (
-              <div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 16px 0" }}>Employee settings</h3>
-                <div style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "12px", padding: "24px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="animate-slide-up">
+                <h3 style={{ fontSize: "18px", fontWeight: "800", margin: "0 0 20px 0", letterSpacing: "-0.02em" }}>Employee settings</h3>
+                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "32px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                     <div>
-                      <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "6px" }}>Theme Mode</label>
-                      <select style={{ backgroundColor: "#0a0f1e", border: "1px solid #374151", color: "#fff", padding: "8px 12px", borderRadius: "6px", fontSize: "12px", width: "100%" }}>
+                      <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#8a8a93", display: "block", marginBottom: "10px", letterSpacing: "0.08em" }}>Theme Mode</label>
+                      <select style={{ background: "rgba(10,10,10,0.6)", border: "1px solid rgba(255,255,255,0.08)", color: "#ffffff", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", width: "100%", outline: "none" }}>
                         <option>Dark Mode (Default)</option>
                         <option>AMOLED Midnight</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "6px" }}>Keyboard Shortcuts</label>
-                      <div style={{ fontSize: "11px", color: "#9ca3af" }}>
-                        <div>Press <code>Ctrl + /</code> to trigger AI chat from any workspace panel.</div>
+                      <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#8a8a93", display: "block", marginBottom: "8px", letterSpacing: "0.08em" }}>Keyboard Shortcuts</label>
+                      <div style={{ fontSize: "12px", color: "#a1a1aa", backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.04)", padding: "14px", borderRadius: "8px" }}>
+                        <div>Press <kbd style={{ background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", margin: "0 4px" }}>Ctrl + /</kbd> to trigger AI chat from any workspace panel.</div>
                       </div>
                     </div>
                   </div>
@@ -1157,101 +1148,106 @@ export default function EmployeeDashboard() {
 
       {/* Teammate Detail Drawer/Modal Overlay */}
       {selectedTeammateId && (
-        <div style={{
-          position: "fixed", top: 0, right: 0, width: "420px", height: "100vh",
-          backgroundColor: "#0d1424", borderLeft: "1px solid #1f2937", padding: "32px",
-          boxSizing: "border-box", zIndex: 10000, overflowY: "auto", boxShadow: "-8px 0 24px rgba(0,0,0,0.5)"
-        }}>
-          {loadingTeammateDetail ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
-              <LoadingSpinner />
-            </div>
-          ) : teammateDetail ? (
-            <div>
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedTeammateId(null)}
-                style={{
-                  position: "absolute", top: "20px", right: "20px", background: "none",
-                  border: "none", color: "#6b7280", cursor: "pointer", fontSize: "16px"
-                }}
-              >
-                ✕
-              </button>
+        <>
+          <div className="drawer-backdrop" onClick={() => setSelectedTeammateId(null)} />
+          <div className="drawer-content">
+            {loadingTeammateDetail ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
+                <LoadingSpinner />
+              </div>
+            ) : teammateDetail ? (
+              <div>
+                {/* Close Button */}
+                <button
+                  onClick={() => setSelectedTeammateId(null)}
+                  style={{
+                    position: "absolute", top: "24px", right: "24px", background: "none",
+                    border: "none", color: "#8a8a93", cursor: "pointer", fontSize: "20px", transition: "color 0.2s"
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = "#8a8a93"; }}
+                >
+                  ✕
+                </button>
 
-              {/* Profile Card */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
-                <div style={{
-                  width: "56px", height: "56px", borderRadius: "50%",
-                  background: "linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)",
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: "900", color: "#fff"
-                }}>
-                  {teammateDetail.profile.name.substring(0, 2).toUpperCase()}
+                {/* Profile Card */}
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "32px" }}>
+                  <div style={{
+                    width: "56px", height: "56px", borderRadius: "50%",
+                    background: "linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: "900", color: "#000000",
+                    boxShadow: "0 0 15px rgba(0, 242, 254, 0.3)"
+                  }}>
+                    {teammateDetail.profile.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "18px", fontWeight: "800", margin: 0, color: "#ffffff" }}>{teammateDetail.profile.name}</h3>
+                    <p style={{ fontSize: "13px", color: "#8a8a93", margin: "4px 0 0 0" }}>
+                      {teammateDetail.profile.designation} • {teammateDetail.profile.companyName}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: "900", margin: 0 }}>{teammateDetail.profile.name}</h3>
-                  <p style={{ fontSize: "12px", color: "#6b7280", margin: "2px 0 0 0" }}>
-                    {teammateDetail.profile.designation} • {teammateDetail.profile.companyName}
+
+                {/* AI Expert Profile Summary */}
+                <div 
+                  className="premium-card"
+                  style={{
+                    borderLeft: "4px solid #00f2fe",
+                    background: "linear-gradient(90deg, rgba(0, 242, 254, 0.02) 0%, rgba(10, 10, 10, 0.45) 100%)",
+                    padding: "20px",
+                    marginBottom: "28px"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#00f2fe", marginBottom: "10px" }}>
+                    <Sparkles size={14} />
+                    <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.05em" }}>AI Team Insight</span>
+                  </div>
+                  <p style={{ fontSize: "13px", color: "#d1d5db", lineHeight: "1.6", margin: 0 }}>
+                    {teammateDetail.aiSummary}
                   </p>
                 </div>
-              </div>
 
-              {/* AI Expert Profile Summary */}
-              <div style={{
-                backgroundColor: "rgba(6,182,212,0.04)", border: "1px solid rgba(6,182,212,0.15)",
-                borderRadius: "12px", padding: "16px", marginBottom: "24px"
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#06b6d4", marginBottom: "8px" }}>
-                  <Sparkles size={14} />
-                  <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>AI Team Insight</span>
+                {/* Repositories */}
+                <div style={{ marginBottom: "28px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#8a8a93", display: "block", marginBottom: "12px", letterSpacing: "0.05em" }}>
+                    Assigned Repositories
+                  </span>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {teammateDetail.repositories.map((repo, idx) => (
+                      <span
+                        key={idx}
+                        className="premium-badge badge-purple"
+                        style={{ padding: "4px 10px", fontSize: "12px", textTransform: "none" }}
+                      >
+                        {repo}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <p style={{ fontSize: "12px", color: "#d1d5db", lineHeight: "1.5", margin: 0 }}>
-                  {teammateDetail.aiSummary}
-                </p>
-              </div>
 
-              {/* Repositories */}
-              <div style={{ marginBottom: "24px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "8px" }}>
-                  Assigned Repositories
-                </span>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  {teammateDetail.repositories.map((repo, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontSize: "11px", color: "#fff", backgroundColor: "#1f2937",
-                        padding: "4px 10px", borderRadius: "6px", fontWeight: "600"
-                      }}
-                    >
-                      {repo}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Commits */}
-              <div>
-                <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#6b7280", display: "block", marginBottom: "12px" }}>
-                  Recent Contributions
-                </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {teammateDetail.commits.map((c) => (
-                    <div key={c.sha} style={{ backgroundColor: "#111827", border: "1px solid #1f2937", borderRadius: "8px", padding: "12px" }}>
-                      <div style={{ display: "flex", justify: "space-between", marginBottom: "4px" }}>
-                        <code style={{ fontSize: "11px", color: "#06b6d4" }}>{c.sha}</code>
-                        <span style={{ fontSize: "10px", color: "#6b7280" }}>{c.repo}</span>
+                {/* Recent Commits */}
+                <div>
+                  <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#8a8a93", display: "block", marginBottom: "16px", letterSpacing: "0.05em" }}>
+                    Recent Contributions
+                  </span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {teammateDetail.commits.map((c) => (
+                      <div key={c.sha} className="premium-card" style={{ padding: "16px" }}>
+                        <div style={{ display: "flex", justify: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                          <code style={{ fontSize: "12px", color: "#00f2fe" }}>{c.sha}</code>
+                          <span className="premium-badge badge-cyan" style={{ fontSize: "10px", textTransform: "none" }}>{c.repo}</span>
+                        </div>
+                        <p style={{ fontSize: "13px", color: "#ffffff", margin: 0, lineHeight: "1.4" }}>{c.message}</p>
                       </div>
-                      <p style={{ fontSize: "12px", color: "#d1d5db", margin: 0 }}>{c.message}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <p style={{ color: "#6b7280", fontSize: "12px" }}>Teammate details unavailable.</p>
-          )}
-        </div>
+            ) : (
+              <p style={{ color: "#8a8a93", fontSize: "13px" }}>Teammate details unavailable.</p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
