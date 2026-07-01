@@ -108,7 +108,7 @@ Instructions:
 Be specific and insightful. Reference the actual files and changes shown.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -227,7 +227,7 @@ Provide:
 9. Bus factor estimate (how many unique contributors are active)`;
 
     const repoResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: repoPrompt,
       config: {
         responseMimeType: "application/json",
