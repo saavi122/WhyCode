@@ -56,7 +56,7 @@ export const detectDrift = async (codeSnippet, docText) => {
   try {
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: `Compare this function/file's documentation against its implementation.
 
 Documentation:
@@ -90,7 +90,7 @@ export const reconstructIntent = async (codeSnippet, commits, prContext) => {
   try {
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: `Given the code below and its git history, explain WHY this code exists — not what it does.
 
 Code:
@@ -127,7 +127,7 @@ export const answerKnowledgeQuestion = async (question, contextChunks) => {
   try {
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: `Answer the question using ONLY the provided context (commits, PRs, file excerpts). Never hallucinate. If the answer isn't in the context, say so clearly.
 
 Context:
