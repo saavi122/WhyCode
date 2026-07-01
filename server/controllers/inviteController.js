@@ -158,12 +158,25 @@ export const acceptInvite = async (req, res, next) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: invite.email.toLowerCase() });
+    const existingUser = await User.findOne({ email: invite.email.toLowerCase() }).select("+password");
     if (existingUser) {
       // Already registered — just mark invite accepted and log them in
       if (existingUser.role !== "employee" || existingUser.company?.toString() !== invite.company._id.toString()) {
         return res.status(400).json({ message: "Email already registered with a different account" });
       }
+
+      // If user has a password, verify it. Otherwise, set it now.
+      if (existingUser.password) {
+        const isMatch = await bcrypt.compare(password, existingUser.password);
+        if (!isMatch) {
+          return res.status(401).json({ message: "Invalid password for this registered account." });
+        }
+      } else {
+        const hashedPassword = await bcrypt.hash(password, 12);
+        existingUser.password = hashedPassword;
+        await existingUser.save();
+      }
+
       invite.status = "accepted";
       await invite.save();
       const jwtToken = jwt.sign(

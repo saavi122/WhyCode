@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle, AlertTriangle, User, Mail, Sparkles } from "lucide-react";
+import { CheckCircle, AlertTriangle, User, Mail, Sparkles, Lock } from "lucide-react";
 import API from "../services/api";
 import "./Auth.css";
 
@@ -18,6 +18,7 @@ export default function EmployeeAcceptInvite() {
   const [errorMsg, setErrorMsg] = useState("");
 
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,11 +45,11 @@ export default function EmployeeAcceptInvite() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !password) return;
     setSubmitError("");
     setSubmitting(true);
     try {
-      const res = await API.post("/invites/accept", { token, name });
+      const res = await API.post("/invites/accept", { token, name, password });
       login(res.data.token, res.data.user);
       navigate("/dashboard");
     } catch (err) {
@@ -211,6 +212,24 @@ export default function EmployeeAcceptInvite() {
                 placeholder="Your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
+                className="input-field"
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="form-group">
+            <label className="form-label">
+              Password
+            </label>
+            <div className="input-container">
+              <Lock size={16} className="input-icon" />
+              <input
+                type="password"
+                placeholder="Create or enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 className="input-field"
               />
