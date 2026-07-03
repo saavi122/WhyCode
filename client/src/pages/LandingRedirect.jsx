@@ -70,7 +70,7 @@ export default function LandingRedirect() {
           WebkitTextFillColor: "transparent",
           margin: "0 0 12px 0"
         }}>
-          CodeMemory
+          WhyCode
         </h1>
         <p style={{
           fontSize: "16px",

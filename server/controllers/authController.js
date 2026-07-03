@@ -148,7 +148,7 @@ export const employeeLogin = async (req, res, next) => {
       name: { $regex: new RegExp(`^${companyName.trim()}$`, "i") },
     });
     if (!company) {
-      return res.status(401).json({ message: "No workspace found with that company name" });
+      return res.status(404).json({ message: "No workspace found with that company name" });
     }
 
     // 2. Check invite — accept BOTH pending (first login) and accepted
@@ -160,7 +160,7 @@ export const employeeLogin = async (req, res, next) => {
     });
 
     if (!invite) {
-      return res.status(401).json({
+      return res.status(404).json({
         message:
           "Access denied. No valid invitation found for this email. Ask your company admin to send or resend your invite.",
       });

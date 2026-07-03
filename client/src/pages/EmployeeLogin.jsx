@@ -1,180 +1,133 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Mail, Building2, ArrowRight, AlertTriangle } from "lucide-react";
+import { Mail, Building, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
 import API from "../services/api";
 
 export default function EmployeeLogin() {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email || !companyName) return;
     setError("");
     setLoading(true);
+
     try {
-      const res = await API.post("/auth/employee-login", { email, companyName });
+      const res = await API.post("/auth/employee-login", {
+        email: email.toLowerCase(),
+        companyName: companyName.trim(),
+      });
       login(res.data.token, res.data.user);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Check your email and company name.");
-    } finally {
+      setError(err.response?.data?.message || "Verification failed. Ensure your email has an active invite matching this company name.");
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#0a0f1e",
-      color: "#f9fafb",
-      fontFamily: "'Inter', sans-serif",
-      padding: "24px",
-      position: "relative",
-      overflow: "hidden",
-    }}>
-      {/* Gradient blob */}
-      <div style={{
-        position: "absolute", top: "20%", left: "50%", transform: "translate(-50%,-50%)",
-        width: "400px", height: "400px",
-        background: "radial-gradient(circle, rgba(6,182,212,0.12) 0%, rgba(0,0,0,0) 70%)",
-        filter: "blur(60px)", pointerEvents: "none"
-      }} />
+    <div className="min-h-screen bg-os-bg text-os-text flex items-center justify-center p-6 relative font-sans transition-colors duration-300 select-none">
+      {/* Decorative Blur Blobs */}
+      <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] rounded-full bg-brand-cyan/6 blur-[60px] pointer-events-none -z-10 animate-pulse-glow" />
+      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full bg-brand-violet/5 blur-[70px] pointer-events-none -z-10 animate-pulse-glow" style={{ animationDelay: "2s" }} />
 
-        <div className="glass-card-premium" style={{
-          width: "100%", maxWidth: "420px", padding: "40px",
-          position: "relative", zIndex: 10, border: "1px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 24px 48px -12px rgba(0,0,0,0.8), inset 0 2px 20px rgba(255,255,255,0.05)"
-        }}>
-          {/* Header */}
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <div style={{
-              width: "48px", height: "48px", borderRadius: "14px",
-              background: "linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontSize: "22px", fontWeight: "900", color: "#fff", marginBottom: "16px",
-              boxShadow: "0 4px 15px rgba(6,182,212,0.4)"
-            }}>C</div>
-            <h1 style={{ fontSize: "20px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0", color: "#f3f4f6" }}>
-              Employee Sign In
-            </h1>
-            <p style={{ fontSize: "13px", color: "#9ca3af", margin: 0 }}>
-              No password needed — just your email and company name.
-            </p>
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/")}
+        className="absolute top-8 left-8 flex items-center gap-2 text-xs font-bold text-os-text-secondary hover:text-brand-blue dark:hover:text-brand-cyan transition"
+      >
+        <ArrowLeft size={14} />
+        <span>Back to gateway</span>
+      </button>
+
+      {/* Login Card */}
+      <div className="w-full max-w-[420px] rounded-3xl border border-os-border glassmorphism p-8 md:p-10 shadow-os-light dark:shadow-os-dark flex flex-col text-left">
+        
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-cyan via-brand-blue to-brand-violet flex items-center justify-center font-black text-white text-lg shadow-md mx-auto mb-4">
+            W
           </div>
-
-          {/* Info Banner */}
-          <div style={{
-            backgroundColor: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.15)",
-            borderRadius: "10px", padding: "12px 14px", marginBottom: "24px",
-            fontSize: "12px", color: "#06b6d4", lineHeight: "1.6"
-          }}>
-            🔐 Access is granted only if your email has an accepted invitation from the company.
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{
-              backgroundColor: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)",
-              borderRadius: "10px", padding: "12px", color: "#ef4444",
-              fontSize: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px",
-              boxShadow: "0 2px 10px rgba(239,68,68,0.1)"
-            }}>
-              <AlertTriangle size={14} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {/* Email */}
-            <div>
-              <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "6px" }}>
-                Work Email
-              </label>
-              <div style={{ position: "relative" }}>
-                <Mail size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                <input
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="glass-input"
-                  style={{ padding: "11px 12px 11px 36px" }}
-                />
-              </div>
-            </div>
-
-            {/* Company Name */}
-            <div>
-              <label style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "6px" }}>
-                Company Name
-              </label>
-              <div style={{ position: "relative" }}>
-                <Building2 size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                <input
-                  type="text"
-                  placeholder="e.g. Acme Corp"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                  className="glass-input"
-                  style={{ padding: "11px 12px 11px 36px" }}
-                />
-              </div>
-              <p style={{ fontSize: "11px", color: "#6b7280", margin: "6px 0 0 0" }}>
-                Enter the exact company name you were invited to
-              </p>
-            </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-glass-primary"
-              style={{
-                padding: "13px", marginTop: "8px", display: "flex", alignItems: "center",
-                justifyContent: "center", gap: "8px", opacity: loading ? 0.7 : 1,
-                width: "100%", background: "linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(99,102,241,0.2) 100%)",
-                borderColor: "rgba(6,182,212,0.3)"
-              }}
-            >
-              {loading ? (
-                <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⚡</span>
-              ) : (
-                <ArrowRight size={15} />
-              )}
-              <span>{loading ? "Signing in..." : "Sign In to Workspace"}</span>
-            </button>
-          </form>
-
-          {/* Footer links */}
-          <div style={{ marginTop: "24px", textAlign: "center", fontSize: "12px", color: "#9ca3af" }}>
-            Not an employee?{" "}
-            <Link to="/company/login" style={{ color: "#818cf8", fontWeight: "700", textDecoration: "none" }}>
-              Company Login
-            </Link>
-            {" · "}
-            <Link to="/" style={{ color: "#9ca3af", textDecoration: "none" }}>
-              Back
-            </Link>
-          </div>
+          <h2 className="text-xl font-black text-os-text tracking-tight">Employee OS Console</h2>
+          <p className="text-xs text-os-text-secondary mt-1">Access your assigned sprint rooms with passwordless SSO.</p>
         </div>
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+        {/* Info Banner */}
+        <div className="mb-5 p-3 rounded-xl bg-brand-cyan/10 border border-brand-cyan/20 text-brand-blue dark:text-brand-cyan text-[11px] font-semibold leading-relaxed">
+          🔐 Access requires a valid company invite accepted by your email node.
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold leading-relaxed">
+            ⚠️ {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          
+          {/* Email field */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-os-text-secondary uppercase tracking-wider">Work Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-3.5 text-os-text-muted" size={14} />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="w-full bg-os-surface border border-os-border rounded-xl pl-10 pr-4 py-3 text-xs text-os-text placeholder-os-text-muted focus:outline-none focus:border-brand-blue/50 dark:focus:border-brand-cyan/50 select-text"
+              />
+            </div>
+          </div>
+
+          {/* Company Name field */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-os-text-secondary uppercase tracking-wider">Company Workspace Name</label>
+            <div className="relative">
+              <Building className="absolute left-3.5 top-3.5 text-os-text-muted" size={14} />
+              <input
+                type="text"
+                required
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Acme Corp"
+                className="w-full bg-os-surface border border-os-border rounded-xl pl-10 pr-4 py-3 text-xs text-os-text placeholder-os-text-muted focus:outline-none focus:border-brand-blue/50 dark:focus:border-brand-cyan/50 select-text"
+              />
+            </div>
+            <span className="text-[10px] text-os-text-muted font-medium pl-1 mt-0.5">Enter the exact name of the company workspace.</span>
+          </div>
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-brand-cyan via-brand-blue to-brand-violet text-white text-xs font-bold shadow-md hover:scale-[1.02] active:scale-98 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {loading ? <RefreshCw size={13} className="animate-spin" /> : <Sparkles size={13} />}
+            <span>Sign In to Console</span>
+          </button>
+        </form>
+
+        <div className="text-center mt-6 text-[11px] text-os-text-secondary font-semibold">
+          Need to configure a new workspace?{" "}
+          <button
+            onClick={() => navigate("/company/signup")}
+            className="text-brand-blue dark:text-brand-cyan hover:underline"
+          >
+            Register company
+          </button>
+        </div>
+
+      </div>
     </div>
   );
 }

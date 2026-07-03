@@ -2,45 +2,77 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Building, Shield, Sliders, LogOut, CheckCircle, Ban, Trash2, Key, RefreshCw
+  Users, Building, Shield, Sliders, LogOut, CheckCircle, Ban,
+  Trash2, Key, RefreshCw, GitFork, BarChart3, Settings,
+  ChevronLeft, ChevronRight, Menu, X, AlertTriangle, Sparkles,
+  Activity, Lock
 } from "lucide-react";
 import API from "../services/api";
-import StatCard from "../components/StatCard";
 import ConfirmDialog from "../components/ConfirmDialog";
 import LoadingSpinner from "../components/LoadingSpinner";
-import "./EmployeeDashboard.css";
+import "./Dashboard.css";
 
+// ─── Helpers ───────────────────────────────────────────────────────────────
+const StatCard = ({ icon: Icon, value, label, accentColor = "#00D9FF" }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="stat-card-glow"
+    style={{ "--accent-color": accentColor, "--accent-glow": `${accentColor}22` }}
+  >
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-[9px] font-black text-[#71717a] uppercase tracking-wider">{label}</span>
+      <div style={{
+        width: 28, height: 28, borderRadius: 8,
+        background: `${accentColor}12`, border: `1px solid ${accentColor}25`,
+        display: "flex", alignItems: "center", justifyContent: "center"
+      }}>
+        <Icon size={13} style={{ color: accentColor }} />
+      </div>
+    </div>
+    <div className="text-3xl font-black text-white mt-1" style={{ color: accentColor }}>
+      {value ?? 0}
+    </div>
+    <div className="mt-3">
+      <svg className="w-full h-7 opacity-40" viewBox="0 0 90 24" preserveAspectRatio="none">
+        <path
+          d={`M 0 ${12 + Math.sin(0) * 6} ${Array.from({ length: 9 }, (_, i) =>
+            `Q ${i * 10 + 5} ${12 + Math.sin(i * 0.9) * 8}, ${(i + 1) * 10} ${12 + Math.sin((i + 1) * 0.9) * 8}`
+          ).join(" ")}`}
+          fill="none"
+          stroke={accentColor}
+          strokeWidth="1.5"
+        />
+      </svg>
+    </div>
+  </motion.div>
+);
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const handleGlobalMouseMove = (e) => {
-      const x = e.clientX;
-      const y = e.clientY;
-      document.documentElement.style.setProperty("--mouse-global-x", `${x}px`);
-      document.documentElement.style.setProperty("--mouse-global-y", `${y}px`);
-    };
-    window.addEventListener("mousemove", handleGlobalMouseMove);
-    return () => window.removeEventListener("mousemove", handleGlobalMouseMove);
-  }, []);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [detailCompanyId, setDetailCompanyId] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("admin_sidebar_collapsed") === "true"
+  );
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleCardMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    e.currentTarget.style.setProperty("--mouse-x", `${x}px`);
-    e.currentTarget.style.setProperty("--mouse-y", `${y}px`);
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem("admin_sidebar_collapsed", next ? "true" : "false");
+      return next;
+    });
   };
 
-  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "companies" | "users"
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [detailCompanyId, setDetailCompanyId] = useState(null);
-
-  // Fetch company details for admin view
+  // ── Queries ──────────────────────────────────────────────────────────────
   const { data: companyDetails, isLoading: detailsLoading } = useQuery({
     queryKey: ["companyDetails", detailCompanyId],
     queryFn: async () => {
@@ -51,7 +83,6 @@ export default function AdminDashboard() {
     enabled: !!detailCompanyId
   });
 
-  // Fetch admin stats
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["adminStats"],
     queryFn: async () => {
@@ -60,7 +91,6 @@ export default function AdminDashboard() {
     }
   });
 
-  // Fetch all companies
   const { data: companies, isLoading: companiesLoading } = useQuery({
     queryKey: ["adminCompanies"],
     queryFn: async () => {
@@ -69,7 +99,6 @@ export default function AdminDashboard() {
     }
   });
 
-  // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["adminUsers"],
     queryFn: async () => {
@@ -78,471 +107,649 @@ export default function AdminDashboard() {
     }
   });
 
-  // Mutation: Change plan
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const planMutation = useMutation({
-    mutationFn: async ({ companyId, plan }) => {
-      return API.patch(`/admin/companies/${companyId}/plan`, { plan });
-    },
+    mutationFn: async ({ companyId, plan }) =>
+      API.patch(`/admin/companies/${companyId}/plan`, { plan }),
     onSuccess: () => {
-      showToast("Company subscription plan updated.", "success");
+      showToast("Company plan updated.", "success");
       queryClient.invalidateQueries(["adminCompanies"]);
       queryClient.invalidateQueries(["adminStats"]);
     },
-    onError: (err) => {
-      showToast(err.response?.data?.message || "Failed to update plan.", "error");
-    }
+    onError: (err) => showToast(err.response?.data?.message || "Failed to update plan.", "error")
   });
 
-  // Mutation: Delete company
   const deleteCompanyMutation = useMutation({
-    mutationFn: async (companyId) => {
-      return API.delete(`/admin/companies/${companyId}`);
-    },
+    mutationFn: async (companyId) => API.delete(`/admin/companies/${companyId}`),
     onSuccess: () => {
       showToast("Company and its data deleted.", "success");
       setSelectedCompany(null);
       queryClient.invalidateQueries(["adminCompanies"]);
       queryClient.invalidateQueries(["adminStats"]);
     },
-    onError: (err) => {
-      showToast(err.response?.data?.message || "Failed to delete company.", "error");
-    }
+    onError: (err) => showToast(err.response?.data?.message || "Failed to delete company.", "error")
   });
 
-  // Toggle user active status
   const toggleUserActiveMutation = useMutation({
-    mutationFn: async ({ userId, isActive }) => {
-      return API.post(`/employees/status/${userId}`, { isActive });
-    },
+    mutationFn: async ({ userId, isActive }) =>
+      API.post(`/employees/status/${userId}`, { isActive }),
     onSuccess: () => {
-      showToast("User status updated successfully.", "success");
+      showToast("User status updated.", "success");
       queryClient.invalidateQueries(["adminUsers"]);
     },
-    onError: (err) => {
-      showToast(err.response?.data?.message || "Failed to update user status.", "error");
-    }
+    onError: (err) => showToast(err.response?.data?.message || "Failed to update user status.", "error")
   });
 
   const isLoading = statsLoading || companiesLoading || usersLoading;
 
-  return (
-    <div className="dashboard-root">
-      {/* Background Decorative Grids and Ambient glows */}
-      <div className="dashboard-bg-grid" />
-      <div className="dashboard-noise" />
-      <div className="ambient-glow-1" />
-      <div className="ambient-glow-2" />
-      <div className="dashboard-spotlight" />
+  // ── Nav items ─────────────────────────────────────────────────────────────
+  const navItems = [
+    { id: "overview",   label: "Overview",    icon: Sliders   },
+    { id: "companies",  label: "Companies",   icon: Building  },
+    { id: "users",      label: "All Users",   icon: Users     },
+  ];
 
-      {/* Sidebar */}
-      <aside className="sidebar-container">
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div className="dashboard-root flex flex-col md:flex-row min-h-screen">
+      <div className="dashboard-grid-pattern" />
+      <div className="dashboard-vignette" />
+
+      {/* Ambient glows */}
+      <div className="absolute top-[10%] left-[20%] w-[350px] h-[350px] rounded-full bg-[#00D9FF]/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[20%] right-[15%] w-[400px] h-[400px] rounded-full bg-[#7C3AED]/5 blur-[140px] pointer-events-none" />
+
+      {/* Mobile Header */}
+      <header className="mobile-header-bar flex items-center justify-between w-full h-16 px-6 border-b border-white/5 bg-black/60 backdrop-blur-md md:hidden z-50">
+        <div className="flex items-center gap-2">
+          <div className="sidebar-logo-box">
+            <Shield size={15} className="text-[#00D9FF]" />
+          </div>
+          <span className="sidebar-logo-text">WhyCode Admin</span>
+        </div>
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:text-[#00D9FF] transition">
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </header>
+
+      {/* Collapsible Sidebar */}
+      <motion.aside
+        animate={{ width: sidebarCollapsed ? 84 : 260 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className={`sidebar-wrapper ${mobileMenuOpen ? "flex" : "hidden"} md:flex`}
+      >
+        {/* Toggle button */}
+        <button onClick={toggleSidebar} className="sidebar-toggle-btn hidden md:flex">
+          {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
+
         <div>
           {/* Logo */}
-          <div className="sidebar-logo">
-            <div className="sidebar-logo-icon" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 0 15px rgba(16, 185, 129, 0.4)" }}>
-              A
+          <div className="sidebar-logo-row">
+            <div className="sidebar-logo-box">
+              <Shield size={15} className="text-[#00D9FF]" />
             </div>
-            <span className="sidebar-logo-text">Admin Center</span>
+            {!sidebarCollapsed && (
+              <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="sidebar-logo-text">
+                WhyCode
+              </motion.span>
+            )}
           </div>
 
-          {/* Nav */}
-          <nav className="sidebar-nav">
-            {[
-              { key: "overview", label: "Overview", icon: <Sliders size={14} /> },
-              { key: "companies", label: "Companies", icon: <Building size={14} /> },
-              { key: "users", label: "All Users", icon: <Users size={14} /> }
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setActiveTab(item.key)}
-                className={`sidebar-link ${activeTab === item.key ? "active" : ""}`}
-                style={{
-                  color: activeTab === item.key ? "#10b981" : "#a1a1aa",
-                  backgroundColor: activeTab === item.key ? "rgba(16,185,129,0.06)" : "transparent",
-                  borderLeftColor: activeTab === item.key ? "#10b981" : "transparent"
-                }}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </button>
-            ))}
+          {/* Sub-label */}
+          {!sidebarCollapsed && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="mx-4 mb-5 px-3 py-1.5 rounded-lg border border-white/5 bg-white/1"
+            >
+              <span className="text-[9px] font-black uppercase tracking-widest text-[#71717a]">Admin Command Center</span>
+            </motion.div>
+          )}
+
+          {/* Nav links */}
+          <nav className="flex flex-col gap-1">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
+                  className={`sidebar-link-item ${active ? "active" : ""}`}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  {active && <div className="sidebar-active-indicator" />}
+                  <Icon size={16} className={active ? "text-[#00D9FF]" : "text-[#71717a]"} />
+                  {!sidebarCollapsed && (
+                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      {item.label}
+                    </motion.span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
-        {/* User Info & LogOut */}
-        <div className="sidebar-user-section">
-          <div className="sidebar-user-card">
-            <div className="sidebar-user-avatar" style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 0 10px rgba(16, 185, 129, 0.2)" }}>
+        {/* Profile + Logout */}
+        <div className="flex flex-col gap-3">
+          <div className="sidebar-profile-box flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#00D9FF] to-[#7C3AED] flex items-center justify-center text-xs font-bold text-black flex-shrink-0">
               AD
             </div>
-            <div style={{ flexGrow: 1, minWidth: 0 }}>
-              <p style={{ fontSize: "12px", fontWeight: "700", margin: 0, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                {user?.name || "System Admin"}
-              </p>
-              <span className="premium-badge badge-emerald" style={{ marginTop: "4px", padding: "2px 6px" }}>
-                SUPER ADMIN
-              </span>
-            </div>
+            {!sidebarCollapsed && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-grow min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user?.name || "System Admin"}</p>
+                <span className="status-pill-premium status-pill-success" style={{ marginTop: 4, fontSize: 9 }}>
+                  SUPER ADMIN
+                </span>
+              </motion.div>
+            )}
           </div>
-
-          <button
-            onClick={logout}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
-              borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255,255,255,0.01)", color: "#a1a1aa",
-              fontSize: "12px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#f43f5e"; e.currentTarget.style.borderColor = "rgba(244,63,94,0.3)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#a1a1aa"; e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)"; }}
-          >
-            <LogOut size={13} />
-            <span>Sign Out</span>
+          <button onClick={logout} className="btn-sidebar-signout">
+            <LogOut size={14} />
+            {!sidebarCollapsed && <span>Sign Out</span>}
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main Content */}
-      <main style={{ flexGrow: 1, padding: "40px", boxSizing: "border-box", overflowY: "auto", height: "100vh", position: "relative", zIndex: 5 }}>
+      <main className="dashboard-content-viewport">
         {isLoading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
+          <div className="flex items-center justify-center h-[70vh]">
             <LoadingSpinner size="large" />
           </div>
         ) : (
-          <div>
-            {/* OVERVIEW PANEL */}
+          <AnimatePresence mode="wait">
+
+            {/* ── OVERVIEW ──────────────────────────────────────────────── */}
             {activeTab === "overview" && (
-              <div className="animate-slide-up">
-                <div style={{ marginBottom: "32px" }}>
-                  <h2 className="hero-title">Admin Configuration Center</h2>
-                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>Global platform telemetry, workspaces, and licenses auditor.</p>
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-6"
+              >
+                <div className="dashboard-vignette" />
+
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-black tracking-tight text-white uppercase">
+                      Admin Command Center
+                    </h2>
+                    <p className="text-[11px] text-[#71717a] mt-1">
+                      Global platform telemetry, workspace audit, and license management.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="status-pill-premium status-pill-success">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                      System Online
+                    </span>
+                  </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "24px", marginBottom: "40px" }}>
-                  <StatCard icon={Building} value={stats?.totalCompanies || 0} label="Total Workspaces" accentColor="#10b981" />
-                  <StatCard icon={Users} value={stats?.totalUsers || 0} label="Total User Accounts" accentColor="#06b6d4" />
-                  <StatCard icon={Shield} value={stats?.activeLicenses || 0} label="Active Enterprise Licenses" accentColor="#8b5cf6" />
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  <StatCard icon={Building}  value={stats?.totalCompanies}    label="Total Workspaces"          accentColor="#00D9FF" />
+                  <StatCard icon={Users}     value={stats?.totalUsers}         label="Total User Accounts"       accentColor="#8b5cf6" />
+                  <StatCard icon={Shield}    value={stats?.activeLicenses}     label="Active Licenses"           accentColor="#10b981" />
                 </div>
 
-                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: "28px" }}>
-                  <h3 style={{ fontSize: "15px", fontWeight: "800", margin: "0 0 20px 0", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", paddingBottom: "14px", color: "#ffffff" }}>
-                    Quick Management Tips
-                  </h3>
-                  <p style={{ fontSize: "13px", color: "#a1a1aa", lineHeight: "1.7", margin: "0 0 14px 0" }}>
-                    - <strong>Enterprise Workspaces:</strong> You can toggle user limits or plans from the "Companies" tab.
-                  </p>
-                  <p style={{ fontSize: "13px", color: "#a1a1aa", lineHeight: "1.7", margin: 0 }}>
-                    - <strong>Deactivating Users:</strong> Deactivating a company owner will lock access for that entire tenant. Use caution.
-                  </p>
+                {/* Quick tips panel */}
+                <div className="glass-panel-premium">
+                  <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/5">
+                    <Sparkles size={14} className="text-[#00D9FF] animate-pulse" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-wider">Quick Management Notes</span>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {[
+                      { title: "Enterprise Workspaces", desc: "Toggle user limits or subscription plans from the Companies tab." },
+                      { title: "Deactivating Users", desc: "Deactivating a company owner locks access for the entire tenant. Use caution." },
+                      { title: "License Audits", desc: "Active license count reflects all non-expired enterprise subscriptions across tenants." },
+                    ].map((tip, i) => (
+                      <div key={i} className="flex gap-3 p-3 rounded-xl bg-white/2 border border-white/4">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#00D9FF] mt-1.5 flex-shrink-0 shadow-[0_0_6px_#00D9FF]" />
+                        <div>
+                          <span className="text-xs font-bold text-white">{tip.title}: </span>
+                          <span className="text-xs text-[#a1a1aa]">{tip.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                {/* Companies snapshot */}
+                <div className="glass-panel-premium">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+                    <span className="text-[10px] font-black text-white uppercase tracking-wider">Recent Workspaces</span>
+                    <button
+                      onClick={() => setActiveTab("companies")}
+                      className="text-[10px] text-[#00D9FF] font-bold hover:underline"
+                    >
+                      View All →
+                    </button>
+                  </div>
+                  <div className="premium-table-container">
+                    <table className="premium-data-table">
+                      <thead>
+                        <tr>
+                          <th>Company</th>
+                          <th>Owner Email</th>
+                          <th>Plan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companies?.slice(0, 5).map(c => (
+                          <tr key={c._id} className="table-row">
+                            <td>
+                              <button
+                                onClick={() => setDetailCompanyId(c._id)}
+                                className="font-bold text-[#00D9FF] hover:text-white transition"
+                              >
+                                {c.name}
+                              </button>
+                            </td>
+                            <td>{c.ownerId?.email || "No Owner"}</td>
+                            <td>
+                              <span className={`status-pill-premium ${c.plan === "enterprise" ? "status-pill-warning" : "status-pill-success"}`}>
+                                {c.plan}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
             )}
 
-            {/* COMPANIES PANEL */}
+            {/* ── COMPANIES ─────────────────────────────────────────────── */}
             {activeTab === "companies" && (
-              <div className="animate-slide-up">
-                <div style={{ marginBottom: "28px" }}>
-                  <h2 className="hero-title">Manage Workspaces</h2>
-                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>Configure subscriptions, active nodes, and delete tenants.</p>
+              <motion.div
+                key="companies"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-6"
+              >
+                <div>
+                  <h2 className="text-xl font-black tracking-tight text-white uppercase">Manage Workspaces</h2>
+                  <p className="text-[11px] text-[#71717a] mt-1">Configure subscriptions, active nodes, and delete tenants.</p>
                 </div>
 
-                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: 0, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", textAlign: "left", backgroundColor: "rgba(255, 255, 255, 0.01)" }}>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Company Name</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Owner Email</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Current Plan</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700", textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {companies?.map((c) => (
-                        <tr key={c._id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                          <td 
-                            style={{ padding: "18px 24px", fontWeight: "700", color: "#10b981", cursor: "pointer", transition: "color 0.2s" }}
-                            onClick={() => setDetailCompanyId(c._id)}
-                            onMouseEnter={(e) => e.currentTarget.style.color = "#059669"}
-                            onMouseLeave={(e) => e.currentTarget.style.color = "#10b981"}
-                          >
-                            {c.name}
-                          </td>
-                          <td style={{ padding: "18px 24px", color: "#d1d5db" }}>{c.ownerId?.email || "No Owner"}</td>
-                          <td style={{ padding: "18px 24px" }}>
-                            <span className={`premium-badge ${c.plan === "enterprise" ? "badge-purple" : "badge-emerald"}`}>
-                              {c.plan}
-                            </span>
-                          </td>
-                          <td style={{ padding: "18px 24px", textAlign: "right" }}>
-                            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", alignItems: "center" }}>
-                              <select
-                                value={c.plan}
-                                onChange={(e) => planMutation.mutate({ companyId: c._id, plan: e.target.value })}
-                                style={{
-                                  backgroundColor: "rgba(10, 10, 10, 0.8)", border: "1px solid rgba(255, 255, 255, 0.08)", color: "#fff",
-                                  borderRadius: "6px", padding: "6px 10px", fontSize: "12px", cursor: "pointer", outline: "none"
-                                }}
-                              >
-                                <option value="free">Free</option>
-                                <option value="growth">Growth</option>
-                                <option value="enterprise">Enterprise</option>
-                              </select>
-                              <button
-                                onClick={() => setSelectedCompany(c)}
-                                className="premium-btn"
-                                style={{ borderColor: "rgba(244,63,94,0.3)", color: "#f43f5e", padding: "6px 12px" }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
+                <div className="glass-panel-premium" style={{ padding: 0, overflow: "hidden" }}>
+                  <div className="premium-table-container" style={{ borderRadius: 20, border: "none" }}>
+                    <table className="premium-data-table">
+                      <thead>
+                        <tr>
+                          <th>Company Name</th>
+                          <th>Owner Email</th>
+                          <th>Plan</th>
+                          <th style={{ textAlign: "right" }}>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {companies?.map(c => (
+                          <tr key={c._id} className="table-row">
+                            <td>
+                              <button
+                                onClick={() => setDetailCompanyId(c._id)}
+                                className="font-bold text-[#00D9FF] hover:text-white transition text-left"
+                              >
+                                {c.name}
+                              </button>
+                            </td>
+                            <td>{c.ownerId?.email || "No Owner"}</td>
+                            <td>
+                              <span className={`status-pill-premium ${c.plan === "enterprise" ? "status-pill-warning" : "status-pill-success"}`}>
+                                {c.plan}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="flex gap-2 justify-end items-center">
+                                <select
+                                  value={c.plan}
+                                  onChange={e => planMutation.mutate({ companyId: c._id, plan: e.target.value })}
+                                  className="glass-input-field"
+                                  style={{ width: "auto", padding: "6px 10px", fontSize: 11, cursor: "pointer" }}
+                                >
+                                  <option value="free">Free</option>
+                                  <option value="growth">Growth</option>
+                                  <option value="enterprise">Enterprise</option>
+                                </select>
+                                <button
+                                  onClick={() => setSelectedCompany(c)}
+                                  className="btn-glass-danger"
+                                >
+                                  <Trash2 size={11} /> Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* USERS PANEL */}
+            {/* ── USERS ─────────────────────────────────────────────────── */}
             {activeTab === "users" && (
-              <div className="animate-slide-up">
-                <div style={{ marginBottom: "28px" }}>
-                  <h2 className="hero-title">Global Users Audit</h2>
-                  <p style={{ fontSize: "14px", color: "#a1a1aa", margin: 0 }}>Review authentication credentials, roles, and status keys.</p>
+              <motion.div
+                key="users"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-6"
+              >
+                <div>
+                  <h2 className="text-xl font-black tracking-tight text-white uppercase">Global Users Audit</h2>
+                  <p className="text-[11px] text-[#71717a] mt-1">Review authentication credentials, roles, and account status.</p>
                 </div>
 
-                <div className="premium-card" onMouseMove={handleCardMouseMove} style={{ padding: 0, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)", textAlign: "left", backgroundColor: "rgba(255, 255, 255, 0.01)" }}>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Name</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Email</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Role</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700" }}>Status</th>
-                        <th style={{ padding: "18px 24px", color: "#8a8a93", fontWeight: "700", textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users?.map((u) => (
-                        <tr key={u._id} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                          <td style={{ padding: "18px 24px", fontWeight: "700", color: "#ffffff" }}>{u.name}</td>
-                          <td style={{ padding: "18px 24px", color: "#d1d5db" }}>{u.email}</td>
-                          <td style={{ padding: "18px 24px" }}>
-                            <span className="premium-badge badge-purple" style={{ textTransform: "none" }}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td style={{ padding: "18px 24px" }}>
-                            <span className={`premium-badge ${u.isActive ? "badge-emerald" : "badge-rose"}`}>
-                              {u.isActive ? "Active" : "Deactivated"}
-                            </span>
-                          </td>
-                          <td style={{ padding: "18px 24px", textAlign: "right" }}>
-                            {u.role !== "admin" && (
-                              <button
-                                onClick={() => toggleUserActiveMutation.mutate({ userId: u._id, isActive: !u.isActive })}
-                                className="premium-btn"
-                                style={{
-                                  borderColor: u.isActive ? "rgba(244,63,94,0.3)" : "rgba(16,185,129,0.3)",
-                                  color: u.isActive ? "#f43f5e" : "#10b981",
-                                  padding: "6px 12px"
-                                }}
-                              >
-                                {u.isActive ? "Deactivate" : "Activate"}
-                              </button>
-                            )}
-                          </td>
+                <div className="glass-panel-premium" style={{ padding: 0, overflow: "hidden" }}>
+                  <div className="premium-table-container" style={{ borderRadius: 20, border: "none" }}>
+                    <table className="premium-data-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Role</th>
+                          <th>Status</th>
+                          <th style={{ textAlign: "right" }}>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {users?.map(u => (
+                          <tr key={u._id} className="table-row">
+                            <td className="font-bold text-white">{u.name}</td>
+                            <td>{u.email}</td>
+                            <td>
+                              <span className="status-pill-premium status-pill-warning" style={{ textTransform: "none" }}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-pill-premium ${u.isActive ? "status-pill-success" : "status-pill-danger"}`}>
+                                {u.isActive ? "Active" : "Deactivated"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              {u.role !== "admin" && (
+                                <button
+                                  onClick={() => toggleUserActiveMutation.mutate({ userId: u._id, isActive: !u.isActive })}
+                                  className={`btn-glass-danger`}
+                                  style={u.isActive
+                                    ? {}
+                                    : { borderColor: "rgba(16,185,129,0.3)", color: "#10b981" }
+                                  }
+                                >
+                                  {u.isActive ? <><Ban size={11} /> Deactivate</> : <><CheckCircle size={11} /> Activate</>}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+
+          </AnimatePresence>
         )}
       </main>
 
+      {/* ── CONFIRM DIALOG ──────────────────────────────────────────────── */}
       <ConfirmDialog
         isOpen={!!selectedCompany}
         title="Delete Workspace?"
-        message={`Are you sure you want to permanently delete company "${selectedCompany?.name}"? This will delete all repositories, employees, and data linked to it.`}
+        message={`Permanently delete "${selectedCompany?.name}"? This will remove all repositories, employees, and data linked to it.`}
         confirmLabel="Delete"
         onConfirm={() => deleteCompanyMutation.mutate(selectedCompany._id)}
         onCancel={() => setSelectedCompany(null)}
       />
 
-      {/* COMPANY DETAILS OVERLAY MODAL */}
-      {detailCompanyId && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center",
-          justifyContent: "center", zIndex: 1000, padding: "20px"
-        }}>
-          <div style={{
-            background: "linear-gradient(135deg, rgba(15, 15, 20, 0.98) 0%, rgba(10, 10, 16, 0.98) 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "20px",
-            width: "100%", maxWidth: "760px", maxHeight: "85vh", display: "flex", flexDirection: "column",
-            boxShadow: "0 30px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)", overflow: "hidden"
-          }}>
-            {/* Modal Header */}
-            <div style={{
-              padding: "24px 32px", borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-              display: "flex", alignItems: "center", justify: "space-between",
-              backgroundColor: "rgba(255, 255, 255, 0.01)", justifyContent: "space-between"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <Building size={20} style={{ color: "#10b981" }} />
-                <h3 style={{ fontSize: "16px", fontWeight: "800", margin: 0, color: "#fff", letterSpacing: "-0.01em" }}>
-                  {companyDetails?.company?.name || "Loading..."} - Workspace Audit
-                </h3>
-              </div>
-              <button
-                onClick={() => setDetailCompanyId(null)}
+      {/* ── COMPANY DETAIL MODAL ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {detailCompanyId && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDetailCompanyId(null)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100]"
+            />
+            <motion.div
+              key="modal"
+              initial={{ opacity: 0, scale: 0.96, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 20 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed inset-0 flex items-center justify-center z-[110] p-5 pointer-events-none"
+            >
+              <div
+                className="glass-panel-premium w-full pointer-events-auto"
                 style={{
-                  background: "none", border: "none", color: "#8a8a93",
-                  cursor: "pointer", fontSize: "22px", fontWeight: "bold", transition: "color 0.2s"
+                  maxWidth: 780,
+                  maxHeight: "88vh",
+                  display: "flex",
+                  flexDirection: "column",
+                  padding: 0,
+                  overflow: "hidden",
+                  boxShadow: "0 40px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06)"
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
-                onMouseLeave={(e) => e.currentTarget.style.color = "#8a8a93"}
               >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div style={{ padding: "32px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "28px" }}>
-              {detailsLoading ? (
-                <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
-                  <LoadingSpinner size="medium" />
+                {/* Modal Header */}
+                <div className="flex items-center justify-between px-8 py-5 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="sidebar-logo-box">
+                      <Building size={14} className="text-[#00D9FF]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white">
+                        {companyDetails?.company?.name || "Loading..."} — Workspace Audit
+                      </h3>
+                      <p className="text-[10px] text-[#71717a] mt-0.5">Full tenant inspection and GitHub integration status</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setDetailCompanyId(null)}
+                    className="w-8 h-8 rounded-lg border border-white/6 bg-white/2 flex items-center justify-center text-[#71717a] hover:text-white hover:border-white/12 transition"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-              ) : (
-                <>
-                  {/* Stats Summary Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
-                    <div style={{ backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
-                      <span style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Subscription Plan</span>
-                      <p style={{ fontSize: "18px", fontWeight: "800", color: "#10b981", margin: "8px 0 0" }}>
-                        {(companyDetails?.company?.plan || "free").toUpperCase()}
-                      </p>
-                    </div>
-                    <div style={{ backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
-                      <span style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Active Employees</span>
-                      <p style={{ fontSize: "18px", fontWeight: "800", color: "#06b6d4", margin: "8px 0 0" }}>
-                        {companyDetails?.employees?.length || 0}
-                      </p>
-                    </div>
-                    <div style={{ backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255, 255, 255, 0.05)", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
-                      <span style={{ fontSize: "10px", color: "#8a8a93", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Connected Repositories</span>
-                      <p style={{ fontSize: "18px", fontWeight: "800", color: "#8b5cf6", margin: "8px 0 0" }}>
-                        {companyDetails?.repositories?.length || 0}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Git Integration Details */}
-                  <div style={{ backgroundColor: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: "20px" }}>
-                    <h4 style={{ fontSize: "13px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>GitHub App Integration Status</h4>
-                    <p style={{ fontSize: "12px", color: "#a1a1aa", margin: "0 0 8px 0" }}>
-                      <strong>Status:</strong> <span style={{ color: "#ffffff" }}>{companyDetails?.company?.github?.connected ? "Connected" : "Not Connected"}</span>
-                    </p>
-                    {companyDetails?.company?.github?.connected && (
-                      <>
-                        <p style={{ fontSize: "12px", color: "#a1a1aa", margin: "0 0 8px 0" }}>
-                          <strong>Organization Name:</strong> <span style={{ color: "#ffffff" }}>{companyDetails?.company?.github?.organization}</span>
-                        </p>
-                        <p style={{ fontSize: "12px", color: "#a1a1aa", margin: "0" }}>
-                          <strong>Connection Date:</strong> <span style={{ color: "#ffffff" }}>{new Date(companyDetails?.company?.github?.connectedAt).toLocaleDateString()}</span>
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Invited Employees Section */}
-                  <div>
-                    <h4 style={{ fontSize: "13px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Invited Employees</h4>
-                    {(!companyDetails?.invites || companyDetails.invites.length === 0) ? (
-                      <div style={{ textAlign: "center", padding: "24px 0", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "10px", color: "#8a8a93", fontSize: "12px" }}>
-                        No invitations sent yet.
-                      </div>
-                    ) : (
-                      <div style={{ overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "10px" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px", textAlign: "left" }}>
-                          <thead>
-                            <tr style={{ backgroundColor: "rgba(255,255,255,0.01)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Name</th>
-                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Email</th>
-                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Repository</th>
-                              <th style={{ padding: "12px 16px", color: "#8a8a93", fontWeight: "700" }}>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {companyDetails.invites.map((invite) => (
-                              <tr key={invite._id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                                <td style={{ padding: "12px 16px", fontWeight: "600", color: "#fff" }}>{invite.name || "N/A"}</td>
-                                <td style={{ padding: "12px 16px", color: "#a1a1aa" }}>{invite.email}</td>
-                                <td style={{ padding: "12px 16px" }}>
-                                  <code style={{ fontSize: "11px", color: "#00f2fe", backgroundColor: "rgba(0,242,254,0.05)", padding: "3px 8px", borderRadius: "4px" }}>
-                                    {invite.assignedRepo || "All Repositories"}
-                                  </code>
-                                </td>
-                                <td style={{ padding: "12px 16px" }}>
-                                  <span className={`premium-badge ${invite.status === "accepted" ? "badge-emerald" : invite.status === "expired" ? "badge-rose" : "badge-amber"}`} style={{ textTransform: "none" }}>
-                                    {invite.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Connected Repositories Section */}
-                  <div>
-                    <h4 style={{ fontSize: "13px", color: "#fff", fontWeight: "800", margin: "0 0 12px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Monitored Code Repositories</h4>
-                    {(!companyDetails?.repositories || companyDetails.repositories.length === 0) ? (
-                      <div style={{ textAlign: "center", padding: "24px 0", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: "10px", color: "#8a8a93", fontSize: "12px" }}>
-                        No repositories connected yet.
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                        {companyDetails.repositories.map((repo) => (
+                {/* Modal Body */}
+                <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-16"><LoadingSpinner size="medium" /></div>
+                  ) : (
+                    <>
+                      {/* ── KPI STATS ROW ── */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: "Subscription Plan", value: (companyDetails?.company?.plan || "free").toUpperCase(), color: "#00D9FF",  icon: "💳" },
+                          { label: "Active Employees",  value: companyDetails?.employees?.length ?? 0,                   color: "#8b5cf6", icon: "👥" },
+                          { label: "Repositories",      value: companyDetails?.repositories?.length ?? 0,                color: "#10b981", icon: "📁" },
+                        ].map(s => (
                           <div
-                            key={repo._id}
-                            style={{
-                              backgroundColor: "rgba(255, 255, 255, 0.01)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px",
-                              padding: "10px 16px", fontSize: "12px", display: "flex", alignItems: "center", gap: "10px"
-                            }}
+                            key={s.label}
+                            className="flex flex-col items-center justify-center gap-1.5 p-5 rounded-2xl border"
+                            style={{ background: `${s.color}06`, borderColor: `${s.color}18` }}
                           >
-                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: repo.status === "completed" ? "#10b981" : "#f59e0b", boxShadow: repo.status === "completed" ? "0 0 8px #10b981" : "0 0 8px #f59e0b" }} />
-                            <span style={{ fontWeight: "600", color: "#fff" }}>{repo.repoName}</span>
-                            <span style={{ color: "#8a8a93", fontSize: "11px" }}>({repo.language})</span>
+                            <span className="text-lg">{s.icon}</span>
+                            <div className="text-[9px] font-black text-[#71717a] uppercase tracking-widest text-center">{s.label}</div>
+                            <div className="text-2xl font-black mt-0.5" style={{ color: s.color }}>{s.value}</div>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
 
-            {/* Modal Footer */}
-            <div style={{
-              padding: "20px 32px", borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-              display: "flex", justifyContent: "flex-end", backgroundColor: "rgba(255, 255, 255, 0.01)"
-            }}>
-              <button
-                onClick={() => setDetailCompanyId(null)}
-                className="premium-btn"
-              >
-                Close Audit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                      {/* ── GITHUB INTEGRATION ── */}
+                      <div className="rounded-2xl border border-white/6 overflow-hidden" style={{ background: "rgba(10,10,12,0.45)" }}>
+                        {/* Section header */}
+                        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-white/5 bg-white/1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#00D9FF] shadow-[0_0_6px_#00D9FF]" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-widest">GitHub App Integration</span>
+                          <span
+                            className="ml-auto status-pill-premium"
+                            style={companyDetails?.company?.github?.connected
+                              ? { background: "rgba(16,185,129,0.08)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }
+                              : { background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }
+                            }
+                          >
+                            {companyDetails?.company?.github?.connected ? "● Connected" : "○ Disconnected"}
+                          </span>
+                        </div>
+                        {/* Key-value rows */}
+                        <div className="flex flex-col divide-y divide-white/4">
+                          {[
+                            { key: "Status", value: companyDetails?.company?.github?.connected ? "GitHub App installed and active" : "No GitHub App connection found" },
+                            ...(companyDetails?.company?.github?.connected ? [
+                              { key: "Organization", value: companyDetails?.company?.github?.organization || "—" },
+                              { key: "Connected On",  value: companyDetails?.company?.github?.connectedAt
+                                ? new Date(companyDetails.company.github.connectedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                                : "—"
+                              },
+                            ] : []),
+                          ].map(row => (
+                            <div key={row.key} className="flex items-center px-5 py-3 gap-4">
+                              <span className="text-[10.5px] font-bold text-[#71717a] w-32 flex-shrink-0">{row.key}</span>
+                              <span className="text-[11px] font-semibold text-white">{row.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* ── INVITED EMPLOYEES ── */}
+                      <div className="rounded-2xl border border-white/6 overflow-hidden" style={{ background: "rgba(10,10,12,0.45)" }}>
+                        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-white/5 bg-white/1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6] shadow-[0_0_6px_#8b5cf6]" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-widest">Invited Employees</span>
+                          <span className="ml-auto text-[10px] font-bold text-[#71717a]">
+                            {companyDetails?.invites?.length || 0} total
+                          </span>
+                        </div>
+                        {(!companyDetails?.invites || companyDetails.invites.length === 0) ? (
+                          <div className="py-10 text-center text-[11px] text-[#71717a]">No invitations sent yet.</div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full" style={{ borderCollapse: "collapse", fontSize: 11.5 }}>
+                              <thead>
+                                <tr className="border-b border-white/5">
+                                  {["Name", "Email", "Repository", "Status"].map(h => (
+                                    <th key={h} className="text-left px-5 py-3 text-[9.5px] font-black text-[#52525b] uppercase tracking-widest">
+                                      {h}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {companyDetails.invites.map((invite, i) => (
+                                  <tr
+                                    key={invite._id}
+                                    className="border-b border-white/4 hover:bg-white/2 transition-colors"
+                                  >
+                                    <td className="px-5 py-3.5 font-bold text-white">{invite.name || "N/A"}</td>
+                                    <td className="px-5 py-3.5 text-[#a1a1aa]">{invite.email}</td>
+                                    <td className="px-5 py-3.5">
+                                      <code className="text-[#00D9FF] bg-[#00D9FF]/8 border border-[#00D9FF]/15 px-2 py-1 rounded-md text-[10px] font-mono">
+                                        {invite.assignedRepo || "All Repositories"}
+                                      </code>
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                      <span
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                                        style={
+                                          invite.status === "accepted"
+                                            ? { background: "rgba(16,185,129,0.08)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }
+                                            : invite.status === "expired"
+                                            ? { background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }
+                                            : { background: "rgba(234,179,8,0.08)", color: "#f59e0b", border: "1px solid rgba(234,179,8,0.2)" }
+                                        }
+                                      >
+                                        <span className="w-1 h-1 rounded-full bg-current" />
+                                        {invite.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ── MONITORED REPOSITORIES ── */}
+                      <div className="rounded-2xl border border-white/6 overflow-hidden" style={{ background: "rgba(10,10,12,0.45)" }}>
+                        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-white/5 bg-white/1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_6px_#10b981]" />
+                          <span className="text-[10px] font-black text-white uppercase tracking-widest">Monitored Repositories</span>
+                          <span className="ml-auto text-[10px] font-bold text-[#71717a]">
+                            {companyDetails?.repositories?.length || 0} connected
+                          </span>
+                        </div>
+                        {(!companyDetails?.repositories || companyDetails.repositories.length === 0) ? (
+                          <div className="py-10 text-center text-[11px] text-[#71717a]">No repositories connected yet.</div>
+                        ) : (
+                          <div className="p-4 flex flex-wrap gap-2">
+                            {companyDetails.repositories.map(repo => (
+                              <div
+                                key={repo._id}
+                                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs"
+                                style={{
+                                  background: repo.status === "completed" ? "rgba(16,185,129,0.05)" : "rgba(245,158,11,0.05)",
+                                  borderColor: repo.status === "completed" ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)"
+                                }}
+                              >
+                                <span
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{
+                                    background: repo.status === "completed" ? "#10b981" : "#f59e0b",
+                                    boxShadow: repo.status === "completed" ? "0 0 6px #10b981" : "0 0 6px #f59e0b"
+                                  }}
+                                />
+                                <span className="font-bold text-white">{repo.repoName}</span>
+                                {repo.language && (
+                                  <span
+                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                                    style={{ background: "rgba(255,255,255,0.05)", color: "#71717a" }}
+                                  >
+                                    {repo.language}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-8 py-4 border-t border-white/5 flex justify-end">
+                  <button onClick={() => setDetailCompanyId(null)} className="btn-glass-secondary" style={{ padding: "10px 20px" }}>
+                    Close Audit
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

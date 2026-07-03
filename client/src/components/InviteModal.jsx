@@ -177,7 +177,7 @@ export default function InviteModal({ isOpen, onClose, onInviteSent }) {
             }}
           >
             {loading ? (
-              <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⚡</span>
+              <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>◌</span>
             ) : (
               <Send size={14} />
             )}

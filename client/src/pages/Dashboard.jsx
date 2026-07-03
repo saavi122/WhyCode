@@ -5,10 +5,12 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import AdminDashboard from "./AdminDashboard";
 import EmployeeDashboard from "./EmployeeDashboard";
+import { motion, AnimatePresence } from "framer-motion";
+import NodeNetwork from "../components/NodeNetwork";
 import {
   Users, Building, Mail, Plus, Shield, Sliders, Play, Lock, Sparkles, Folder,
   GitFork, Layers, LogOut, RefreshCw, Key, Settings, Cpu, HardDrive, Menu, X,
-  Clock, CheckCircle, AlertTriangle, BarChart3, ChevronRight, MessageSquare,
+  Clock, CheckCircle, AlertTriangle, BarChart3, ChevronRight, ChevronLeft, MessageSquare,
   Search, Trash2, Send, CornerDownLeft, Eye, HelpCircle, Check, Ban
 } from "lucide-react";
 import API from "../services/api";
@@ -52,7 +54,7 @@ const TableSkeleton = () => (
     {[1, 2, 3, 4].map((i) => (
       <div key={i} className="pulse-skeleton" style={{
         height: "40px",
-        backgroundColor: "#1f2937",
+        backgroundColor: "#16161a",
         borderRadius: "8px",
         width: "100%"
       }} />
@@ -66,7 +68,7 @@ const CardGridSkeleton = () => (
     {[1, 2, 3, 4].map((i) => (
       <div key={i} className="pulse-skeleton" style={{
         height: "180px",
-        backgroundColor: "#111827",
+        backgroundColor: "#0c0c0e",
         border: "1px solid #1f2937",
         borderRadius: "12px",
         width: "100%"
@@ -94,6 +96,7 @@ function CompanyDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebar_collapsed") === "true");
 
   // Fetch Company Profile globally for sidebar branding
   const { data: profile } = useQuery({
@@ -104,6 +107,14 @@ function CompanyDashboard() {
     }
   });
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebar_collapsed", next ? "true" : "false");
+      return next;
+    });
+  };
+
   // Active state styling helper
   const isActive = (path) => {
     if (path === "/dashboard") {
@@ -112,162 +123,133 @@ function CompanyDashboard() {
     return location.pathname.startsWith(path);
   };
 
-  const navItemStyle = (path) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    fontSize: "13px",
-    fontWeight: isActive(path) ? "700" : "600",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    color: isActive(path) ? "#6366f1" : "#9ca3af",
-    backgroundColor: isActive(path) ? "rgba(99, 102, 241, 0.08)" : "transparent",
-    borderLeft: isActive(path) ? "3px solid #6366f1" : "3px solid transparent",
-    textDecoration: "none",
-    transition: "all 0.2s"
-  });
-
   return (
-    <div className="dashboard-root" style={{
-      display: "flex",
-      flexDirection: "column"
-    }}>
+    <div className="dashboard-root flex flex-col md:flex-row min-h-screen">
       <div className="dashboard-grid-pattern" />
 
-      {/* Mobile Header */}
-      <header style={{
-        display: "none",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "16px 24px",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-        height: "64px",
-        boxSizing: "border-box"
-      }} className="mobile-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{
-            width: "28px", height: "28px", borderRadius: "8px",
-            background: "linear-gradient(135deg, #10b981 0%, #8b5cf6 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontWeight: "900", color: "#000", fontSize: "14px"
-          }}>C</div>
-          <span style={{ fontSize: "14px", fontWeight: "900", letterSpacing: "-0.02em" }}>CodeMemory</span>
+      {/* Floating color orbs in background */}
+      <div className="absolute top-[10%] left-[20%] w-[350px] h-[350px] rounded-full bg-[#00D9FF]/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[20%] right-[15%] w-[400px] h-[400px] rounded-full bg-[#7C3AED]/5 blur-[140px] pointer-events-none" />
+
+      {/* Mobile Top Header */}
+      <header className="mobile-header-bar flex items-center justify-between w-full h-16 px-6 border-b border-white/5 bg-black/60 backdrop-blur-md md:hidden z-50">
+        <div className="flex items-center gap-2" onClick={() => navigate("/")}>
+          <div className="sidebar-logo-box">
+            <GitFork size={16} className="text-[#00D9FF]" />
+          </div>
+          <span className="sidebar-logo-text">WhyCode</span>
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}
+          className="text-white hover:text-[#00D9FF] transition"
         >
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </header>
 
-      <div style={{ display: "flex", flexGrow: 1 }}>
-        {/* Sidebar Left */}
-        <aside
-          className={`sidebar-nav glass-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}
-          style={{
-            width: "260px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            padding: "32px 24px",
-            boxSizing: "border-box",
-            position: "sticky",
-            top: 0,
-            height: "100vh"
-          }}
+      {/* Collapsible Sidebar */}
+      <motion.aside
+        animate={{ width: sidebarCollapsed ? 84 : 260 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className={`sidebar-wrapper ${mobileMenuOpen ? "flex" : "hidden"} md:flex`}
+      >
+        {/* Sidebar Toggle Circle Button (only on desktop) */}
+        <button
+          onClick={toggleSidebar}
+          className="sidebar-toggle-btn hidden md:flex"
         >
-          <div>
-            {/* Logo */}
-            <div className="sidebar-logo" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "36px" }}>
-              <div style={{
-                width: "32px", height: "32px", borderRadius: "8px",
-                background: "linear-gradient(135deg, #10b981 0%, #8b5cf6 100%)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: "900", color: "#000", fontSize: "16px"
-              }}>
-                C
-              </div>
-              <span style={{ fontSize: "16px", fontWeight: "800", letterSpacing: "-0.03em" }}>CodeMemory</span>
-            </div>
+          {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
 
-            {/* Menu */}
-            <nav style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className={`sidebar-link ${isActive("/dashboard") ? "active-link" : ""}`}>
-                <Sliders size={15} />
-                <span>Overview</span>
-              </Link>
-              <Link to="/dashboard/employees" onClick={() => setMobileMenuOpen(false)} className={`sidebar-link ${isActive("/dashboard/employees") ? "active-link" : ""}`}>
-                <Users size={15} />
-                <span>Employees</span>
-              </Link>
-              <Link to="/dashboard/invites" onClick={() => setMobileMenuOpen(false)} className={`sidebar-link ${isActive("/dashboard/invites") ? "active-link" : ""}`}>
-                <Mail size={15} />
-                <span>Invitations</span>
-              </Link>
-              <Link to="/dashboard/repositories" onClick={() => setMobileMenuOpen(false)} className={`sidebar-link ${isActive("/dashboard/repositories") ? "active-link" : ""}`}>
-                <GitFork size={15} />
-                <span>Repositories</span>
-              </Link>
-              <Link to="/dashboard/chat" onClick={() => setMobileMenuOpen(false)} className={`sidebar-link ${isActive("/dashboard/chat") ? "active-link" : ""}`}>
-                <MessageSquare size={15} />
-                <span>Knowledge Chat</span>
-              </Link>
-              <Link to="/dashboard/profile" onClick={() => setMobileMenuOpen(false)} className={`sidebar-link ${isActive("/dashboard/profile") ? "active-link" : ""}`}>
-                <Settings size={15} />
-                <span>Company Profile</span>
-              </Link>
-            </nav>
+        <div>
+          {/* Logo Branding */}
+          <div className="sidebar-logo-row" onClick={() => navigate("/")}>
+            <div className="sidebar-logo-box">
+              <GitFork size={16} className="text-[#00D9FF]" />
+            </div>
+            {!sidebarCollapsed && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="sidebar-logo-text"
+              >
+                WhyCode
+              </motion.span>
+            )}
           </div>
 
-          {/* User profile section */}
-          <div>
-            <div className="sidebar-profile-card" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{
-                width: "38px", height: "38px", borderRadius: "50%",
-                background: "linear-gradient(135deg, #10b981 0%, #8b5cf6 100%)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: "800", color: "#000",
-                overflow: "hidden", flexShrink: 0
-              }}>
-                {profile?.logo ? (
-                  <img src={profile.logo} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  profile?.name?.substring(0, 2).toUpperCase() || "CM"
-                )}
-              </div>
-              <div style={{ flexGrow: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "13px", fontWeight: "800", margin: 0, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", color: "#fff" }}>
-                  {profile?.name || "CodeMemory"}
-                </p>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
-                  <span style={{ fontSize: "10px", color: "#a1a1aa", fontWeight: "600", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                    {user?.name}
-                  </span>
-                  <span style={{
-                    fontSize: "8px", textTransform: "uppercase", color: "#10b981", fontWeight: "900",
-                    backgroundColor: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.12)", padding: "1px 5px", borderRadius: "3px", flexShrink: 0
-                  }}>
-                    {user?.role}
-                  </span>
-                </div>
-              </div>
+          {/* Navigation Links */}
+          <nav className="flex flex-col gap-1">
+            {[
+              { path: "/dashboard", label: "Overview", icon: Sliders },
+              { path: "/dashboard/employees", label: "Employees", icon: Users },
+              { path: "/dashboard/invites", label: "Invitations", icon: Mail },
+              { path: "/dashboard/repositories", label: "Repositories", icon: GitFork },
+              { path: "/dashboard/chat", label: "Knowledge Chat", icon: MessageSquare },
+              { path: "/dashboard/profile", label: "Workspace Settings", icon: Settings },
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`sidebar-link-item ${active ? "active" : ""}`}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  {active && <div className="sidebar-active-indicator" />}
+                  <Icon size={16} className={active ? "text-[#00D9FF]" : "text-[#71717a]"} />
+                  {!sidebarCollapsed && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Profile Card & Log Out */}
+        <div className="flex flex-col gap-3">
+          <div className="sidebar-profile-box flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#00D9FF] to-[#7C3AED] flex items-center justify-center text-xs font-bold text-black overflow-hidden flex-shrink-0">
+              {profile?.logo ? (
+                <img src={profile.logo} alt={profile.name} className="w-full h-full object-cover" />
+              ) : (
+                profile?.name?.substring(0, 2).toUpperCase() || "WC"
+              )}
             </div>
-
-            <button
-              onClick={logout}
-              className="btn-sidebar-logout"
-            >
-              <LogOut size={14} />
-              <span>Sign Out</span>
-            </button>
+            {!sidebarCollapsed && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex-grow min-w-0"
+              >
+                <p className="text-xs font-bold text-white truncate">{profile?.name || "WhyCode Workspace"}</p>
+                <p className="text-[10px] text-[#71717a] truncate">{user?.name}</p>
+              </motion.div>
+            )}
           </div>
-        </aside>
 
-        {/* Content Area */}
-        <main style={{ flexGrow: 1, padding: "40px", boxSizing: "border-box", overflowY: "auto", height: "100vh" }} className="main-content glass-main">
-          <Routes>
+          <button
+            onClick={logout}
+            className="btn-sidebar-signout"
+          >
+            <LogOut size={14} />
+            {!sidebarCollapsed && <span>Sign Out</span>}
+          </button>
+        </div>
+      </motion.aside>
+
+      {/* Main Content Area */}
+      <main className="dashboard-content-viewport">
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
             <Route path="/" element={<OverviewPanel />} />
             <Route path="/employees" element={<EmployeesPanel />} />
             <Route path="/invites" element={<InvitationsPanel />} />
@@ -276,8 +258,8 @@ function CompanyDashboard() {
             <Route path="/chat" element={<KnowledgeChatPanel />} />
             <Route path="/profile" element={<CompanyProfilePanel />} />
           </Routes>
-        </main>
-      </div>
+        </AnimatePresence>
+      </main>
 
       <style>{`
         .pulse-skeleton {
@@ -289,27 +271,17 @@ function CompanyDashboard() {
           100% { opacity: 0.6; }
         }
         @media (max-width: 768px) {
-          .mobile-header {
-            display: flex !important;
-          }
-          .sidebar-nav {
-            display: none !important;
+          .sidebar-wrapper {
             position: fixed !important;
             left: 0;
             top: 64px;
             height: calc(100vh - 64px) !important;
+            width: 260px !important;
             z-index: 999;
-            width: 100vw !important;
           }
-          .sidebar-nav.mobile-open {
-            display: flex !important;
-          }
-          .main-content {
-            padding: 20px !important;
+          .dashboard-content-viewport {
             height: calc(100vh - 64px) !important;
-          }
-          .sidebar-logo {
-            display: none !important;
+            padding: 20px !important;
           }
         }
       `}</style>
@@ -362,58 +334,191 @@ function OverviewPanel() {
     }
   });
 
+  // Mock data for contribution heatmap (168 days)
+  // MUST be before any early returns to satisfy Rules of Hooks
+  const heatmapCells = React.useMemo(() => {
+    return Array.from({ length: 168 }, (_, idx) => {
+      const seed = Math.sin(idx * 0.15) * Math.cos(idx * 0.05);
+      if (seed < -0.3) return 0;
+      if (seed < 0.1) return 1;
+      if (seed < 0.5) return 2;
+      if (seed < 0.8) return 3;
+      return 4;
+    });
+  }, []);
+
   if (isLoading) return <LoadingSpinner size="large" />;
   if (isError) {
     return (
-      <div style={{ padding: "20px", color: "#ef4444", backgroundColor: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "8px" }}>
+      <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs">
         Error loading overview statistics: {error.message}
       </div>
     );
   }
 
+  const progressRadius = 38;
+  const progressCircumference = 2 * Math.PI * progressRadius;
+  const progressOffset = progressCircumference - ((stats.avgDocHealth || 0) / 100) * progressCircumference;
+
   return (
-    <div>
-      <div style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
+      {/* Vignette & subtle glows */}
+      <div className="dashboard-vignette" />
+
+      {/* Welcome Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>System Overview</h2>
-          <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Real-time telemetry and indexing analysis summary.</p>
+          <h2 className="text-xl font-black tracking-tight text-white uppercase">Workspace Telemetry</h2>
+          <p className="text-[11px] text-[#71717a] mt-1">Grounded AST documentation metrics, index health ratios, and pull requests.</p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px", marginBottom: "40px" }}>
-        <StatCard icon={Users} value={stats.totalEmployees} label="Total Employees" accentColor="#06b6d4" />
+      {/* KPI Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <StatCard icon={Users} value={stats.totalEmployees} label="Employees" accentColor="#00D9FF" />
         <StatCard icon={Clock} value={stats.pendingInvites} label="Pending Invites" accentColor="#eab308" />
-        <StatCard icon={CheckCircle} value={stats.acceptedInvites} label="Accepted Invites" accentColor="#10b981" />
-        <StatCard icon={Folder} value={stats.totalRepositories} label="Repositories" accentColor="#6366f1" />
-        <StatCard icon={AlertTriangle} value={stats.totalDriftIssues} label="Open Drift Issues" accentColor="#ef4444" />
-        <StatCard icon={BarChart3} value={`${stats.avgDocHealth}%`} label="Avg Doc Health" accentColor="#8b5cf6" />
+        <StatCard icon={CheckCircle} value={stats.acceptedInvites} label="Accepted" accentColor="#10b981" />
+        <StatCard icon={Folder} value={stats.totalRepositories} label="Repositories" accentColor="#7C3AED" />
+        <StatCard icon={AlertTriangle} value={stats.totalDriftIssues} label="Drift Alerts" accentColor="#ef4444" trend={stats.totalDriftIssues > 0 ? "down" : "up"} />
+        <StatCard icon={BarChart3} value={`${stats.avgDocHealth}%`} label="Doc Health" accentColor="#10b981" />
       </div>
 
-      {/* Middle Row Layout */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", marginBottom: "40px" }}>
-        {/* Recent Activity */}
-        <div className="glass-card-premium" style={{ flex: "2 1 500px", boxSizing: "border-box" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 20px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "12px", color: "#fff" }}>Recent Activity</h3>
+      {/* Developer Workspace Widgets Row (Heatmap + Coverage Rings) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* GitHub style Commit Heatmap */}
+        <div className="glass-panel-premium lg:col-span-2 flex flex-col gap-4">
+          <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
+            <span className="text-[10px] font-black text-white uppercase tracking-wider">Branch Commits Heatmap</span>
+            <span className="text-[10px] text-[#71717a]">Last 24 Weeks Activity</span>
+          </div>
+
+          <div className="w-full overflow-x-auto py-1">
+            <div className="grid grid-flow-col grid-rows-7 gap-[5px] w-max">
+              {heatmapCells.map((val, idx) => {
+                const densityClass = 
+                  val === 0 ? "bg-[#121214]" :
+                  val === 1 ? "bg-[#00D9FF]/20" :
+                  val === 2 ? "bg-[#00D9FF]/40" :
+                  val === 3 ? "bg-[#00D9FF]/70" :
+                  "bg-[#00D9FF] shadow-[0_0_6px_rgba(0,217,255,0.4)]";
+                return (
+                  <div
+                    key={idx}
+                    className={`heatmap-cell ${densityClass}`}
+                    title={`Day ${idx + 1}: ${val * 3} index commits`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center text-[10px] text-[#71717a] mt-1 pt-1.5 border-t border-white/5">
+            <span>Grid maps direct repository AST updates</span>
+            <div className="flex items-center gap-1.5">
+              <span>Less</span>
+              <div className="w-2.5 h-2.5 rounded-sm bg-[#121214]" />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[#00D9FF]/20" />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[#00D9FF]/40" />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[#00D9FF]/70" />
+              <div className="w-2.5 h-2.5 rounded-sm bg-[#00D9FF]" />
+              <span>More</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Documentation health progress rings & Language Stats */}
+        <div className="glass-panel-premium flex flex-col justify-between gap-4">
+          <div className="flex justify-between items-center border-b border-white/5 pb-2.5">
+            <span className="text-[10px] font-black text-white uppercase tracking-wider">Coverage & Languages</span>
+          </div>
+
+          <div className="flex items-center gap-5 my-1">
+            {/* SVG circular progress ring */}
+            <div className="relative w-[76px] h-[76px] flex items-center justify-center flex-shrink-0">
+              <svg width="76" height="76" className="-rotate-90">
+                <circle
+                  cx="38"
+                  cy="38"
+                  r={progressRadius}
+                  stroke="rgba(255,255,255,0.03)"
+                  strokeWidth="6"
+                  fill="transparent"
+                />
+                <circle
+                  cx="38"
+                  cy="38"
+                  r={progressRadius}
+                  stroke="#10b981"
+                  strokeWidth="6"
+                  fill="transparent"
+                  strokeDasharray={progressCircumference}
+                  strokeDashoffset={progressOffset}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="text-xs font-black text-white">{stats.avgDocHealth}%</span>
+                <span className="text-[7.5px] font-bold text-[#71717a] uppercase tracking-wider">Doc score</span>
+              </div>
+            </div>
+
+            {/* Language distribution list */}
+            <div className="flex-grow flex flex-col gap-1.5 min-w-0">
+              <div className="h-1.5 rounded-full overflow-hidden flex w-full bg-white/5">
+                <div className="h-full bg-[#00D9FF]" style={{ width: "68%" }} />
+                <div className="h-full bg-[#7C3AED]" style={{ width: "22%" }} />
+                <div className="h-full bg-[#eab308]" style={{ width: "10%" }} />
+              </div>
+              <div className="flex flex-col gap-1 text-[9.5px] text-[#71717a] mt-1">
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1.5 truncate"><span className="w-1.5 h-1.5 rounded-full bg-[#00D9FF]" /> JavaScript</span>
+                  <span className="font-bold text-white">68%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1.5 truncate"><span className="w-1.5 h-1.5 rounded-full bg-[#7C3AED]" /> TypeScript</span>
+                  <span className="font-bold text-white">22%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1.5 truncate"><span className="w-1.5 h-1.5 rounded-full bg-[#eab308]" /> Configuration</span>
+                  <span className="font-bold text-white">10%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Middle Grid Row: Activity + Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Recent Activity Feed */}
+        <div className="glass-panel-premium lg:col-span-2 flex flex-col gap-4">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3">Recent Repository Activity</h3>
           {stats.recentActivity?.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#71717a" }}>
-              No repository activity yet. Connect a repo to get started.
+            <div className="py-12 text-center text-xs text-[#71717a]">
+              No activity logs available. Link a repository to populate analytics.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {stats.recentActivity.map((act) => (
-                <div key={act._id} style={{ display: "flex", alignItems: "center", justifySpaceBetween: "space-between", borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: "12px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#10b981", boxShadow: "0 0 8px #10b981" }} />
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: "12px", fontWeight: "700", color: "#f9fafb", margin: "0 0 4px 0", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                        {act.message.length > 60 ? `${act.message.substring(0, 60)}...` : act.message}
-                      </p>
-                      <span style={{ fontSize: "10px", color: "#71717a" }}>by {act.author} • {timeAgo(act.date)}</span>
+            <div className="flex flex-col gap-4">
+              {stats.recentActivity.slice(0, 5).map((act) => (
+                <div key={act._id} className="flex items-center justify-between border-b border-white/5 pb-3 gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_8px_#10b981] flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{act.message}</p>
+                      <span className="text-[10px] text-[#71717a]">by {act.author} • {timeAgo(act.date)}</span>
                     </div>
                   </div>
-                  <span className="status-pill-premium status-pill-info">
-                    {act.repository?.repoName || "Repository"}
+                  <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[9px] font-bold text-[#00D9FF] truncate flex-shrink-0">
+                    {act.repository?.repoName || "repo"}
                   </span>
                 </div>
               ))}
@@ -421,45 +526,39 @@ function OverviewPanel() {
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="glass-card-premium" style={{ flex: "1 1 300px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "12px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 12px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "12px", color: "#fff" }}>Quick Actions</h3>
+        {/* Quick Actions Panel */}
+        <div className="glass-panel-premium flex flex-col gap-3">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3">Workspace Controls</h3>
           
           <button
             onClick={() => setIsInviteOpen(true)}
-            className="btn-glass-primary"
-            style={{ width: "100%" }}
+            className="btn-glass-primary w-full h-11"
           >
             <Users size={14} />
-            <span>Invite Employee</span>
+            <span>Invite Developer</span>
           </button>
 
           <button
             onClick={() => setIsConnectOpen(true)}
-            className="btn-glass-secondary"
-            style={{ width: "100%" }}
+            className="btn-glass-secondary w-full h-11"
           >
             <GitFork size={14} />
-            <span>Connect Repository</span>
+            <span>Link Repository</span>
           </button>
 
-          <div style={{ position: "relative" }}>
+          <div className="relative">
             <button
               onClick={() => setTriggerDropdownOpen(!triggerDropdownOpen)}
-              className="btn-glass-secondary"
-              style={{ width: "100%" }}
+              className="btn-glass-secondary w-full h-11"
             >
               <Play size={14} />
-              <span>Trigger Scan</span>
+              <span>Manual Scan Trigger</span>
             </button>
 
             {triggerDropdownOpen && (
-              <div className="glass-card-premium" style={{
-                position: "absolute", bottom: "100%", left: 0, width: "100%", padding: "8px", boxSizing: "border-box",
-                zIndex: 100, display: "flex", flexDirection: "column", gap: "4px", marginBottom: "8px"
-              }}>
+              <div className="absolute bottom-full left-0 w-full p-2 border border-white/5 bg-[#0c0c0e] rounded-xl flex flex-col gap-1 z-30 mb-2 shadow-2xl">
                 {repos?.length === 0 ? (
-                  <span style={{ fontSize: "11px", color: "#71717a", padding: "8px", textAlign: "center" }}>No connected repos</span>
+                  <span className="text-[10px] text-[#71717a] p-2 text-center">No links configured</span>
                 ) : (
                   repos?.map((repo) => (
                     <button
@@ -468,11 +567,7 @@ function OverviewPanel() {
                         scanMutation.mutate(repo._id);
                         setTriggerDropdownOpen(false);
                       }}
-                      className="sidebar-link"
-                      style={{
-                        padding: "8px", border: "none",
-                        fontSize: "11px", textAlign: "left"
-                      }}
+                      className="text-left text-xs text-white hover:text-[#00D9FF] hover:bg-white/5 p-2 rounded-lg transition"
                     >
                       {repo.fullName}
                     </button>
@@ -481,57 +576,78 @@ function OverviewPanel() {
               </div>
             )}
           </div>
+
+          {/* PR Pipeline status board widget */}
+          <div className="mt-1 p-3 border border-white/5 bg-[#0c0c0e]/50 rounded-xl flex flex-col gap-2.5">
+            <span className="text-[9px] font-bold text-white uppercase tracking-wider border-b border-white/5 pb-1">Branch Pull Requests</span>
+            <div className="flex justify-between items-center text-[10.5px] py-1">
+              <div className="flex flex-col items-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#eab308]" />
+                <span className="font-extrabold text-white mt-1">2 Open</span>
+              </div>
+              <div className="h-[1px] flex-grow bg-white/5 mx-2" />
+              <div className="flex flex-col items-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00D9FF]" />
+                <span className="font-extrabold text-white mt-1">1 Review</span>
+              </div>
+              <div className="h-[1px] flex-grow bg-white/5 mx-2" />
+              <div className="flex flex-col items-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                <span className="font-extrabold text-white mt-1">12 Merged</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Repositories Mini Table */}
-      <div className="glass-card-premium" style={{ padding: "24px" }}>
-        <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 16px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "12px", color: "#fff" }}>Repositories Summary</h3>
+      {/* Repositories Health Overview Grid Table */}
+      <div className="glass-panel-premium">
+        <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3 mb-4">Repositories Telemetry Status</h3>
         {repos?.length === 0 ? (
           <EmptyState
             icon={Folder}
-            title="Connect your first repository"
-            description="Link a repository to track code changes, documentation drift, and ask tribal knowledge questions."
+            title="Link your first repository"
+            description="Link a repository to track code comments drift, view commit histories, and execute AI chat grounding."
             actionLabel="Connect Repo"
             onAction={() => setIsConnectOpen(true)}
           />
         ) : (
-          <div className="premium-table-wrapper">
-            <table className="premium-data-grid">
+          <div className="premium-table-container">
+            <table className="premium-data-table">
               <thead>
                 <tr>
-                  <th>Repo Name</th>
+                  <th>Repository</th>
                   <th>Language</th>
-                  <th>Doc Health</th>
-                  <th>Drift Issues</th>
+                  <th>Coverage Health</th>
+                  <th>Drift Alerts</th>
                   <th>Status</th>
-                  <th>Last Scan</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th>Last Indexed</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {repos?.map((repo) => (
-                  <tr key={repo._id} className="grid-row">
-                    <td style={{ fontWeight: "700" }}>{repo.repoName}</td>
-                    <td style={{ color: "#a1a1aa" }}>{repo.language || "Unknown"}</td>
-                    <td style={{ minWidth: "140px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ flexGrow: 1, height: "6px", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: "3px", overflow: "hidden" }}>
-                          <div style={{
-                            width: `${repo.docHealthScore}%`, height: "100%",
-                            backgroundColor: repo.docHealthScore > 70 ? "#10b981" : repo.docHealthScore > 40 ? "#f59e0b" : "#ef4444",
-                            boxShadow: `0 0 8px ${repo.docHealthScore > 70 ? "#10b981" : repo.docHealthScore > 40 ? "#f59e0b" : "#ef4444"}44`
-                          }} />
+                  <tr key={repo._id} className="table-row">
+                    <td className="font-bold text-white">{repo.repoName}</td>
+                    <td className="text-[#71717a] font-mono text-xs">{repo.language || "Unknown"}</td>
+                    <td className="min-w-[140px]">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-grow h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div
+                            style={{ width: `${repo.docHealthScore}%` }}
+                            className={`h-full rounded-full ${
+                              repo.docHealthScore > 70 ? "bg-[#10b981]" : repo.docHealthScore > 40 ? "bg-[#eab308]" : "bg-[#ef4444]"
+                            }`}
+                          />
                         </div>
-                        <span style={{ fontWeight: "700" }}>{repo.docHealthScore}%</span>
+                        <span className="font-bold text-xs">{repo.docHealthScore}%</span>
                       </div>
                     </td>
                     <td>
-                      <span style={{
-                        color: repo.openDriftCount > 0 ? "#ef4444" : "#10b981",
-                        fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px"
-                      }}>
-                        {repo.openDriftCount > 0 ? <AlertTriangle size={12} /> : null}
+                      <span className={`font-bold flex items-center gap-1 text-xs ${
+                        repo.openDriftCount > 0 ? "text-[#ef4444]" : "text-[#10b981]"
+                      }`}>
+                        {repo.openDriftCount > 0 ? <AlertTriangle size={12} /> : <Check size={12} />}
                         <span>{repo.openDriftCount}</span>
                       </span>
                     </td>
@@ -543,20 +659,18 @@ function OverviewPanel() {
                         {repo.status}
                       </span>
                     </td>
-                    <td style={{ color: "#71717a" }}>{formatDate(repo.lastScanAt)}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <td className="text-[#71717a] text-xs">{formatDate(repo.lastScanAt)}</td>
+                    <td className="text-right">
+                      <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => scanMutation.mutate(repo._id)}
-                          className="btn-glass-secondary"
-                          style={{ padding: "4px 10px", borderRadius: "6px", fontSize: "10px" }}
+                          className="px-2.5 py-1 text-[10px] font-bold text-white border border-white/5 bg-white/5 rounded-lg hover:bg-white/10 transition"
                         >
-                          Scan Now
+                          Scan
                         </button>
                         <button
                           onClick={() => navigate(`/dashboard/repositories/${repo._id}`)}
-                          className="btn-glass-primary"
-                          style={{ padding: "4px 10px", borderRadius: "6px", fontSize: "10px" }}
+                          className="px-2.5 py-1 text-[10px] font-bold text-black bg-white rounded-lg hover:bg-white/90 transition"
                         >
                           View
                         </button>
@@ -572,7 +686,7 @@ function OverviewPanel() {
 
       <InviteModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} onInviteSent={() => queryClient.invalidateQueries(["stats"])} />
       <ConnectRepoModal isOpen={isConnectOpen} onClose={() => setIsConnectOpen(false)} onConnected={() => queryClient.invalidateQueries(["repositories"])} />
-    </div>
+    </motion.div>
   );
 }
 
@@ -617,83 +731,84 @@ function EmployeesPanel() {
   ) || [];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>Team Members</h2>
-          <p style={{ fontSize: "13px", color: "#71717a", margin: 0 }}>Manage developer access permissions and company profiles.</p>
+          <h2 className="text-2xl font-black text-white">Team Management</h2>
+          <p className="text-xs text-[#71717a] mt-1">Provision developer credentials and audit repository access logs.</p>
         </div>
         <button
           onClick={() => setIsInviteOpen(true)}
           className="btn-glass-primary"
         >
           <Plus size={14} />
-          <span>Invite Employee</span>
+          <span>Invite Developer</span>
         </button>
       </div>
 
-      <div className="glass-card-premium" style={{ padding: "24px" }}>
-        {/* Search */}
-        <div style={{ position: "relative", marginBottom: "20px", maxWidth: "320px" }}>
-          <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#71717a" }} />
+      <div className="glass-panel-premium flex flex-col gap-5">
+        {/* Search Input */}
+        <div className="relative w-full max-w-[320px]">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717a]" />
           <input
             type="text"
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="glass-input-premium"
-            style={{ paddingLeft: "36px" }}
+            className="glass-input-field pl-10"
           />
         </div>
 
         {isLoading ? (
           <TableSkeleton />
         ) : filteredEmployees.length === 0 ? (
-          <div style={{ padding: "40px", textAlign: "center", color: "#71717a" }}>
-            No employees yet. Send invites to grow your team.
+          <div className="py-12 text-center text-xs text-[#71717a]">
+            No employees registered in workspace. Send an invitation to begin.
           </div>
         ) : (
-          <div className="premium-table-wrapper">
-            <table className="premium-data-grid">
+          <div className="premium-table-container">
+            <table className="premium-data-table">
               <thead>
                 <tr>
-                  <th>Member</th>
+                  <th>Developer</th>
                   <th>Email</th>
                   <th>Joined Date</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th>Permissions</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmployees.map((emp) => {
                   const initials = emp.name.substring(0, 2).toUpperCase();
                   return (
-                    <tr key={emp._id} className="grid-row">
+                    <tr key={emp._id} className="table-row">
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{
-                            width: "32px", height: "32px", borderRadius: "50%",
-                            background: "linear-gradient(135deg, #10b981 0%, #8b5cf6 100%)", display: "flex", alignItems: "center",
-                            justifyContent: "center", color: "#000", fontWeight: "800", fontSize: "10px"
-                          }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00D9FF] to-[#7C3AED] flex items-center justify-center text-black font-extrabold text-[10px]">
                             {initials}
                           </div>
-                          <span style={{ fontWeight: "700" }}>{emp.name}</span>
+                          <span className="font-bold text-white">{emp.name}</span>
                         </div>
                       </td>
-                      <td style={{ color: "#a1a1aa" }}>{emp.email}</td>
-                      <td style={{ color: "#71717a" }}>{formatDate(emp.createdAt)}</td>
+                      <td className="text-[#a1a1aa] font-mono text-xs">{emp.email}</td>
+                      <td className="text-[#71717a] text-xs">{formatDate(emp.createdAt)}</td>
                       <td>
                         <span className="status-pill-premium status-pill-success">
-                          Active
+                          Active Dev
                         </span>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="text-right">
                         <button
                           onClick={() => setSelectedUser(emp)}
-                          className="btn-glass-danger"
+                          className="px-2.5 py-1 text-[10px] font-bold text-red-400 border border-red-500/10 bg-red-500/5 rounded-lg hover:bg-red-500/10 transition"
                         >
-                          Remove
+                          Revoke Access
                         </button>
                       </td>
                     </tr>
@@ -709,13 +824,13 @@ function EmployeesPanel() {
 
       <ConfirmDialog
         isOpen={!!selectedUser}
-        title={`Remove ${selectedUser?.name}?`}
-        message="This will revoke their access to all repositories."
-        confirmLabel="Remove"
+        title={`Revoke access for ${selectedUser?.name}?`}
+        message="This will instantly block their token key and revoke permission to read all workspace repositories."
+        confirmLabel="Revoke access"
         onConfirm={() => deleteMutation.mutate(selectedUser._id)}
         onCancel={() => setSelectedUser(null)}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -774,135 +889,122 @@ function InvitationsPanel() {
   }) || [];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>Invitations</h2>
-          <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Track active registration links sent to team members.</p>
+          <h2 className="text-2xl font-black text-white">Pending Registrations</h2>
+          <p className="text-xs text-[#71717a] mt-1">Audit onboarding links dispatched to external developers.</p>
         </div>
         <button
           onClick={() => setIsInviteOpen(true)}
           className="btn-glass-primary"
-          style={{
-            display: "flex", alignItems: "center", gap: "8px"
-          }}
         >
           <Mail size={14} />
-          <span>Send Invite</span>
+          <span>Send Invite Link</span>
         </button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+      {/* Mini Tabs */}
+      <div className="flex gap-2">
         {["all", "pending", "accepted", "expired"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`btn-glass-secondary ${activeTab === tab ? "active" : ""}`}
-            style={{
-              padding: "6px 12px", borderRadius: "6px", fontSize: "11px", fontWeight: "700",
-              textTransform: "uppercase", cursor: "pointer", 
-              backgroundColor: activeTab === tab ? "rgba(16, 185, 129, 0.1)" : "transparent",
-              color: activeTab === tab ? "#10b981" : "#9ca3af",
-              border: activeTab === tab ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid transparent"
-            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
+              activeTab === tab ? "bg-[#00D9FF]/10 text-[#00D9FF] border border-[#00D9FF]/20" : "text-[#71717a] hover:text-white"
+            }`}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      <div className="glass-card-premium" style={{ padding: "24px" }}>
+      <div className="glass-panel-premium flex flex-col gap-4">
         {isLoading ? (
           <TableSkeleton />
         ) : filteredInvites.length === 0 ? (
-          <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>
-            No {activeTab === "all" ? "" : activeTab} invitations.
+          <div className="py-12 text-center text-xs text-[#71717a]">
+            No invitations matching state: <strong>{activeTab}</strong>.
           </div>
         ) : (
-          <div className="premium-table-wrapper" style={{ overflowX: "auto" }}>
-            <div style={{
-              backgroundColor: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.12)",
-              borderRadius: "10px", padding: "12px 16px", marginBottom: "16px",
-              fontSize: "11px", color: "#10b981", lineHeight: "1.6",
-              boxShadow: "0 4px 15px rgba(0,0,0,0.4)"
-            }}>
-              {`💡 `}<strong>No email in dev?</strong>{` Click `}<strong>📋 Copy Link</strong>{` and share it with the employee. They can also sign in directly at `}<strong>/employee/login</strong>{` with email + company name.`}
+          <div className="premium-table-container">
+            <div className="p-3.5 border-b border-[#10b981]/15 bg-[#10b981]/5 text-[#10b981] text-[11px] font-medium leading-relaxed rounded-t-xl">
+              💡 <strong>Registration link note:</strong> You can copy invite links directly and deliver them to your developers. Alternatively, they can sign in at <strong>/employee/login</strong> with their work email.
             </div>
-            <table className="premium-data-grid" style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px", fontSize: "12px" }}>
+
+            <table className="premium-data-table">
               <thead>
-                <tr style={{ textAlign: "left" }}>
-                  <th style={{ padding: "12px", color: "#6b7280" }}>Email</th>
-                  <th style={{ padding: "12px", color: "#6b7280" }}>Status</th>
-                  <th style={{ padding: "12px", color: "#6b7280" }}>Repo</th>
-                  <th style={{ padding: "12px", color: "#6b7280" }}>Invited By</th>
-                  <th style={{ padding: "12px", color: "#6b7280" }}>Expires At</th>
-                  <th style={{ padding: "12px", color: "#6b7280", textAlign: "right" }}>Actions</th>
+                <tr>
+                  <th>Recipient Email</th>
+                  <th>Status</th>
+                  <th>Scoped Repo</th>
+                  <th>Dispatched By</th>
+                  <th>Expiration</th>
+                  <th className="text-right">Controls</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredInvites.map((inv) => {
                   const isExpired = new Date(inv.expiresAt) < new Date();
                   const isAccepted = inv.status === "accepted";
-                  const isPending = inv.status === "pending" && !isExpired;
                   
                   return (
-                    <tr key={inv._id} className="grid-row">
-                      <td style={{ padding: "16px 12px" }}>
-                        <div style={{ fontWeight: "700", color: "#f3f4f6" }}>{inv.email}</div>
-                        {inv.name && <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "2px" }}>{inv.name}</div>}
+                    <tr key={inv._id} className="table-row">
+                      <td>
+                        <div className="font-bold text-white">{inv.email}</div>
+                        {inv.name && <span className="text-[10px] text-[#71717a]">{inv.name}</span>}
                       </td>
-                      <td style={{ padding: "16px 12px" }}>
-                        <span className={`status-pill-premium ${isAccepted ? 'success' : isExpired ? 'danger' : 'warning'}`}>
+                      <td>
+                        <span className={`status-pill-premium ${isAccepted ? 'status-pill-success' : isExpired ? 'status-pill-danger' : 'status-pill-warning'}`}>
                           {isExpired && inv.status === "pending" ? "Expired" : inv.status}
                         </span>
                       </td>
-                      <td style={{ padding: "16px 12px", fontSize: "11px" }}>
-                        {inv.assignedRepo
-                          ? <span style={{ color: "#6366f1", backgroundColor: "rgba(99,102,241,0.06)", padding: "4px 8px", borderRadius: "6px" }}>{inv.assignedRepo}</span>
-                          : <span style={{ color: "#374151" }}>—</span>
-                        }
+                      <td className="text-xs font-mono text-[#00D9FF]">
+                        {inv.assignedRepo ? (
+                          <span className="px-2 py-0.5 rounded bg-[#00D9FF]/5 border border-[#00D9FF]/10">{inv.assignedRepo}</span>
+                        ) : (
+                          <span className="text-[#3f3f46]">—</span>
+                        )}
                       </td>
-                      <td style={{ padding: "16px 12px", color: "#9ca3af" }}>{inv.invitedBy?.name || "Admin"}</td>
-                      <td style={{ padding: "16px 12px", color: isExpired ? "#ef4444" : "#6b7280" }}>
+                      <td className="text-xs text-[#a1a1aa]">{inv.invitedBy?.name || "Workspace Admin"}</td>
+                      <td className={`text-xs ${isExpired ? "text-red-400" : "text-[#71717a]"}`}>
                         {isExpired ? "Expired" : formatDate(inv.expiresAt)}
                       </td>
-                      <td style={{ padding: "16px 12px", textAlign: "right" }}>
+                      <td className="text-right">
                         {inv.status === "pending" && !isExpired ? (
-                          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          <div className="flex gap-2 justify-end">
                             {inv.inviteLink && (
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(inv.inviteLink);
-                                  showToast("✅ Invite link copied! Share it with the employee.", "success");
+                                  showToast("Registration Link Copied!", "success");
                                 }}
-                                title={inv.inviteLink}
-                                className="btn-glass-secondary"
-                                style={{
-                                  color: "#06b6d4",
-                                  borderColor: "rgba(6,182,212,0.3)"
-                                }}
+                                className="px-2.5 py-1 text-[10px] font-bold text-[#00D9FF] border border-[#00D9FF]/10 bg-[#00D9FF]/5 rounded-lg"
                               >
-                                📋 Copy Link
+                                Copy Link
                               </button>
                             )}
                             <button
                               onClick={() => resendMutation.mutate(inv._id)}
-                              disabled={resendMutation.isPending}
-                              className="btn-glass-secondary"
-                              style={{ color: "#6366f1", borderColor: "rgba(99,102,241,0.3)" }}
+                              className="px-2.5 py-1 text-[10px] font-bold text-white border border-white/5 bg-white/5 rounded-lg"
                             >
-                              {resendMutation.isPending && resendMutation.variables === inv._id ? <LoadingSpinner /> : "Resend"}
+                              Resend
                             </button>
                             <button
                               onClick={() => setSelectedInvite(inv)}
-                              className="btn-glass-danger"
+                              className="px-2.5 py-1 text-[10px] font-bold text-red-400 border border-red-500/10 bg-red-500/5 rounded-lg"
                             >
                               Revoke
                             </button>
                           </div>
                         ) : (
-                          <span style={{ fontSize: "10px", color: "#6b7280" }}>--</span>
+                          <span className="text-xs text-[#3f3f46]">--</span>
                         )}
                       </td>
                     </tr>
@@ -918,13 +1020,13 @@ function InvitationsPanel() {
 
       <ConfirmDialog
         isOpen={!!selectedInvite}
-        title="Revoke Invitation?"
-        message={`This will invalidate the invite link sent to ${selectedInvite?.email}.`}
-        confirmLabel="Revoke"
+        title="Revoke Registration Link?"
+        message={`This will invalidate the pending invitation sent to ${selectedInvite?.email}.`}
+        confirmLabel="Revoke Link"
         onConfirm={() => revokeMutation.mutate(selectedInvite._id)}
         onCancel={() => setSelectedInvite(null)}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -952,9 +1054,8 @@ function RepositoriesPanel() {
     mutationFn: async (repoId) => {
       return API.post(`/scan/${repoId}`);
     },
-    onSuccess: (data, repoId) => {
+    onSuccess: () => {
       showToast("Repository scan triggered.", "success");
-      // Instantly refresh query
       queryClient.invalidateQueries(["repositories"]);
     },
     onError: (err) => {
@@ -968,7 +1069,7 @@ function RepositoriesPanel() {
       return API.delete(`/repositories/${repoId}`);
     },
     onSuccess: () => {
-      showToast("Repository disconnected and all logs deleted.", "success");
+      showToast("Repository disconnected successfully.", "success");
       queryClient.invalidateQueries(["repositories"]);
       setSelectedRepo(null);
     },
@@ -990,18 +1091,21 @@ function RepositoriesPanel() {
   }, [repos, queryClient]);
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>Connected Repositories</h2>
-          <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Configure and index codebases for documentation health tracking.</p>
+          <h2 className="text-2xl font-black text-white">Monitored Repositories</h2>
+          <p className="text-xs text-[#71717a] mt-1">Configure workspace branches, analyze AST drift logs, and manage commit index timelines.</p>
         </div>
         <button
           onClick={() => setIsConnectOpen(true)}
           className="btn-glass-primary"
-          style={{
-            display: "flex", alignItems: "center", gap: "8px"
-          }}
         >
           <GitFork size={14} />
           <span>Connect Repository</span>
@@ -1014,108 +1118,101 @@ function RepositoriesPanel() {
         <EmptyState
           icon={Folder}
           title="No repositories connected"
-          description="Connect a repository in owner/repo format to analyze comments, find documentation gaps, and run AI lookups."
+          description="Index a repository using owner/repository format to calculate drift indices and launch AI assistant chat bots."
           actionLabel="Connect Repository"
           onAction={() => setIsConnectOpen(true)}
         />
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "24px" }}>
-          {repos?.map((repo) => (
-            <div
-              key={repo._id}
-              className="glass-card-premium repo-card-hover"
-              style={{
-                padding: "24px",
-                display: "flex", flexDirection: "column", justify: "space-between", gap: "16px"
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                  <h3 style={{ fontSize: "15px", fontWeight: "900", margin: 0, color: "#f3f4f6" }}>{repo.repoName}</h3>
-                  <span className="status-pill-premium" style={{
-                    backgroundColor: "rgba(99, 102, 241, 0.1)", color: "#818cf8", borderColor: "rgba(99, 102, 241, 0.2)"
-                  }}>{repo.language || "JavaScript"}</span>
-                </div>
-                <code style={{ fontSize: "11px", color: "#9ca3af", letterSpacing: "0.02em" }}>{repo.fullName}</code>
-
-                {/* Progress bar */}
-                <div style={{ marginTop: "24px" }}>
-                  <div style={{ display: "flex", justify: "space-between", fontSize: "11px", fontWeight: "700", marginBottom: "8px" }}>
-                    <span style={{ color: "#9ca3af" }}>Documentation Health</span>
-                    <span style={{ color: "#f3f4f6" }}>{repo.docHealthScore}%</span>
-                  </div>
-                  <div style={{ height: "6px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "6px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.05)" }}>
-                    <div style={{
-                      width: `${repo.docHealthScore}%`, height: "100%",
-                      background: repo.docHealthScore > 70 ? "linear-gradient(90deg, #059669, #10b981)" : repo.docHealthScore > 40 ? "linear-gradient(90deg, #d97706, #f59e0b)" : "linear-gradient(90deg, #dc2626, #ef4444)",
-                      boxShadow: repo.docHealthScore > 70 ? "0 0 10px rgba(16,185,129,0.5)" : "none",
-                      transition: "width 1s cubic-bezier(0.4, 0, 0.2, 1)"
-                    }} />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "16px", marginTop: "24px", fontSize: "11px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <AlertTriangle size={13} style={{ color: repo.openDriftCount > 0 ? "#ef4444" : "#10b981" }} />
-                    <span style={{ fontWeight: "700", color: repo.openDriftCount > 0 ? "#f87171" : "#a7f3d0" }}>{repo.openDriftCount} Open Drift Issues</span>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Users size={13} style={{ color: "#9ca3af" }} />
-                    <span style={{ fontWeight: "700", color: "#d1d5db" }}>
-                      Bus Factor: {repo.busFactor < 2 ? "⚠ Low" : "✓ Healthy"} ({repo.busFactor})
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {repos?.map((repo) => {
+            const hasDrift = repo.openDriftCount > 0;
+            return (
+              <div
+                key={repo._id}
+                className="glass-panel-premium flex flex-col justify-between gap-6 p-6"
+              >
+                <div>
+                  {/* Card Header Info */}
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <h3 className="text-base font-black text-white truncate max-w-[70%]">{repo.repoName}</h3>
+                    <span className="px-2.5 py-0.5 rounded bg-[#00D9FF]/5 border border-[#00D9FF]/10 text-[9px] font-bold text-[#00D9FF] uppercase tracking-wider flex-shrink-0">
+                      {repo.language || "JS"}
                     </span>
                   </div>
+                  <code className="text-[10px] text-[#71717a] font-mono block mb-4 truncate">{repo.fullName}</code>
+
+                  {/* Coverage Health Progress bar */}
+                  <div className="flex flex-col gap-2.5 mt-5">
+                    <div className="flex justify-between items-center text-[10.5px] font-bold">
+                      <span className="text-[#71717a]">Documentation Health</span>
+                      <span className="text-white">{repo.docHealthScore}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                      <div
+                        style={{
+                          width: `${repo.docHealthScore}%`,
+                          boxShadow: repo.docHealthScore > 70 ? "0 0 10px rgba(16,185,129,0.35)" : "none"
+                        }}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          repo.docHealthScore > 70 ? "bg-[#10b981]" : repo.docHealthScore > 40 ? "bg-[#eab308]" : "bg-[#ef4444]"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Telemetry metrics capsules */}
+                  <div className="flex flex-wrap items-center gap-3 mt-6 text-[10.5px]">
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+                      hasDrift ? "bg-red-500/5 border-red-500/10 text-red-400" : "bg-[#10b981]/5 border-[#10b981]/10 text-[#10b981]"
+                    }`}>
+                      <AlertTriangle size={12} />
+                      <span className="font-bold">{repo.openDriftCount} Drift issues</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/5 text-[#a1a1aa]">
+                      <Users size={12} />
+                      <span>Bus Factor: <strong className="text-white">{repo.busFactor}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Controls Footer */}
+                <div className="border-t border-white/5 pt-4 mt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-2 h-2 rounded-full ${
+                      repo.status === "scanning"
+                        ? "bg-amber-400 animate-pulse shadow-[0_0_8px_#eab308]"
+                        : repo.status === "active"
+                        ? "bg-[#10b981] shadow-[0_0_8px_#10b981]"
+                        : "bg-[#52525b]"
+                    }`} />
+                    <span className="text-[10px] font-bold text-white capitalize">{repo.status}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => scanMutation.mutate(repo._id)}
+                      disabled={repo.status === "scanning" || scanMutation.isPending}
+                      className="px-3.5 py-1.5 text-xs font-bold text-white border border-white/5 bg-white/5 rounded-lg hover:bg-white/10 hover:border-white/15 transition duration-200 disabled:opacity-50"
+                    >
+                      {repo.status === "scanning" ? "Scanning" : "Scan"}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/dashboard/repositories/${repo._id}`)}
+                      className="px-3.5 py-1.5 text-xs font-bold text-black bg-white rounded-lg hover:bg-white/90 transition duration-200"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => setSelectedRepo(repo)}
+                      className="p-2 text-red-400 border border-red-500/10 bg-red-500/5 rounded-lg hover:bg-red-500/10 hover:border-red-500/20 transition duration-200 flex items-center justify-center"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "16px", display: "flex", justify: "space-between", alignItems: "center", marginTop: "8px" }}>
-                <span style={{ fontSize: "10px", color: "#9ca3af", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: repo.status === "scanning" ? "#f59e0b" : repo.status === "active" ? "#10b981" : "#6b7280", boxShadow: `0 0 8px ${repo.status === "scanning" ? "#f59e0b" : repo.status === "active" ? "#10b981" : "transparent"}` }}></div>
-                  <strong style={{ color: "#e5e7eb", textTransform: "capitalize", letterSpacing: "0.05em" }}>{repo.status}</strong>
-                </span>
-
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    onClick={() => scanMutation.mutate(repo._id)}
-                    disabled={repo.status === "scanning" || scanMutation.isPending}
-                    className="btn-glass-secondary"
-                    style={{
-                      padding: "6px 12px",
-                      display: "flex", alignItems: "center", gap: "6px",
-                      color: repo.status === "scanning" ? "#f59e0b" : "#d1d5db",
-                      borderColor: repo.status === "scanning" ? "rgba(245, 158, 11, 0.3)" : "rgba(255,255,255,0.1)"
-                    }}
-                  >
-                    {repo.status === "scanning" ? (
-                      <>
-                        <span style={{ animation: "spin 1s linear infinite" }}>⚡</span>
-                        <span>Scanning</span>
-                      </>
-                    ) : (
-                      "Scan"
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => navigate(`/dashboard/repositories/${repo._id}`)}
-                    className="btn-glass-primary"
-                    style={{ padding: "6px 12px", fontSize: "11px" }}
-                  >
-                    View
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedRepo(repo)}
-                    className="btn-glass-danger"
-                    style={{ padding: "6px 8px" }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1124,12 +1221,12 @@ function RepositoriesPanel() {
       <ConfirmDialog
         isOpen={!!selectedRepo}
         title="Disconnect Repository?"
-        message={`Are you sure you want to disconnect ${selectedRepo?.fullName}? This will delete all drift metrics, questions, and commits logs.`}
-        confirmLabel="Disconnect"
+        message={`This will delete all drift metrics, documentation index lists, and AI chat logs associated with ${selectedRepo?.fullName}.`}
+        confirmLabel="Disconnect Repo"
         onConfirm={() => deleteMutation.mutate(selectedRepo._id)}
         onCancel={() => setSelectedRepo(null)}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -1176,7 +1273,7 @@ function RepositoryDetailPanel() {
       return API.post(`/scan/${repoId}`);
     },
     onSuccess: () => {
-      showToast("Scan started.", "success");
+      showToast("Scan initiated.", "success");
       queryClient.invalidateQueries(["repositories", repoId]);
     },
     onError: (err) => {
@@ -1199,7 +1296,7 @@ function RepositoryDetailPanel() {
   });
 
   if (repoLoading || driftLoading || timelineLoading) return <LoadingSpinner size="large" />;
-  if (!repo) return <div style={{ padding: "20px", color: "#ef4444" }}>Repository not found.</div>;
+  if (!repo) return <div className="p-4 text-red-400 text-xs">Repository not found.</div>;
 
   // Filter drifts client-side
   const filteredDrifts = drifts?.filter((d) => {
@@ -1209,103 +1306,95 @@ function RepositoryDetailPanel() {
   }) || [];
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
       {/* Top Header Section */}
-      <div style={{ display: "flex", justify: "space-between", alignItems: "center", marginBottom: "32px" }}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span style={{ fontSize: "11px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Repository Details</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: "900", margin: 0, color: "#f3f4f6" }}>{repo.repoName}</h2>
-            <span className="status-pill-premium" style={{
-              backgroundColor: "rgba(99, 102, 241, 0.1)", color: "#818cf8", borderColor: "rgba(99, 102, 241, 0.2)"
-            }}>{repo.language}</span>
+          <span className="text-[10px] font-black text-[#71717a] uppercase tracking-wider">Repository Details</span>
+          <div className="flex items-center gap-3 mt-1">
+            <h2 className="text-xl font-black text-white">{repo.repoName}</h2>
+            <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-bold text-[#00D9FF] uppercase">{repo.language}</span>
           </div>
         </div>
 
         <button
           onClick={() => scanMutation.mutate()}
           disabled={repo.status === "scanning"}
-          className="btn-glass-primary"
-          style={{ padding: "10px 18px", gap: "6px" }}
+          className="btn-glass-primary h-11"
         >
-          {repo.status === "scanning" ? <LoadingSpinner /> : <RefreshCw size={12} />}
-          <span>{repo.status === "scanning" ? "Scanning..." : "Scan Now"}</span>
+          {repo.status === "scanning" ? <LoadingSpinner /> : <RefreshCw size={13} />}
+          <span>{repo.status === "scanning" ? "Scanning..." : "Scan Repo"}</span>
         </button>
       </div>
 
-      {/* Mini stats chips */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "32px" }}>
-        <div className="glass-card-premium" style={{ padding: "14px", textAlign: "center" }}>
-          <span style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Doc Health</span>
-          <p style={{ fontSize: "20px", fontWeight: "900", margin: "6px 0 0 0", color: "#10b981", textShadow: "0 0 10px rgba(16,185,129,0.3)" }}>{repo.docHealthScore}%</p>
+      {/* Mini stats cards grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="glass-panel-premium p-4 flex flex-col items-center justify-center text-center">
+          <span className="text-[9px] font-bold text-[#71717a] uppercase tracking-widest">Coverage Health</span>
+          <p className="text-xl font-black text-[#10b981] mt-2">{repo.docHealthScore}%</p>
         </div>
-        <div className="glass-card-premium" style={{ padding: "14px", textAlign: "center" }}>
-          <span style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Drift Issues</span>
-          <p style={{ fontSize: "20px", fontWeight: "900", margin: "6px 0 0 0", color: "#ef4444", textShadow: "0 0 10px rgba(239,68,68,0.3)" }}>{repo.openDriftCount}</p>
+        <div className="glass-panel-premium p-4 flex flex-col items-center justify-center text-center">
+          <span className="text-[9px] font-bold text-[#71717a] uppercase tracking-widest">Drift Alerts</span>
+          <p className="text-xl font-black text-[#ef4444] mt-2">{repo.openDriftCount}</p>
         </div>
-        <div className="glass-card-premium" style={{ padding: "14px", textAlign: "center" }}>
-          <span style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Bus Factor</span>
-          <p style={{ fontSize: "20px", fontWeight: "900", margin: "6px 0 0 0", color: "#06b6d4", textShadow: "0 0 10px rgba(6,182,212,0.3)" }}>{repo.busFactor}</p>
+        <div className="glass-panel-premium p-4 flex flex-col items-center justify-center text-center">
+          <span className="text-[9px] font-bold text-[#71717a] uppercase tracking-widest">Bus Factor</span>
+          <p className="text-xl font-black text-[#00D9FF] mt-2">{repo.busFactor}</p>
         </div>
-        <div className="glass-card-premium" style={{ padding: "14px", textAlign: "center" }}>
-          <span style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Last Scanned</span>
-          <p style={{ fontSize: "12px", fontWeight: "800", margin: "12px 0 0 0", color: "#e5e7eb" }}>{timeAgo(repo.lastScanAt) || "Never"}</p>
+        <div className="glass-panel-premium p-4 flex flex-col items-center justify-center text-center">
+          <span className="text-[9px] font-bold text-[#71717a] uppercase tracking-widest">Last Scanned</span>
+          <p className="text-xs font-bold text-white mt-3.5 truncate max-w-full">{timeAgo(repo.lastScanAt) || "Never"}</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: "24px", paddingBottom: "8px" }}>
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-white/5 pb-2">
         {[
-          { key: "drift", label: "Drift Issues" },
-          { key: "timeline", label: "Timeline" },
-          { key: "chat", label: "Knowledge Chat" },
+          { key: "drift", label: "Drift Logs" },
+          { key: "timeline", label: "Indexing History" },
+          { key: "chat", label: "AI Grounded Chat" },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`btn-glass-secondary ${activeTab === tab.key ? "active" : ""}`}
-            style={{
-              padding: "8px 16px",
-              fontSize: "12px",
-              backgroundColor: activeTab === tab.key ? "rgba(99, 102, 241, 0.1)" : "transparent",
-              color: activeTab === tab.key ? "#818cf8" : "#9ca3af",
-              borderColor: activeTab === tab.key ? "rgba(99, 102, 241, 0.3)" : "transparent"
-            }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition ${
+              activeTab === tab.key ? "bg-[#00D9FF]/10 text-[#00D9FF] border border-[#00D9FF]/20" : "text-[#71717a] hover:text-white"
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* TAB 1: DRIFT ISSUES */}
+      {/* TAB 1: DRIFT LOGS */}
       {activeTab === "drift" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-            <div style={{ position: "relative", width: "100%", maxWidth: "300px" }}>
-              <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative w-full max-w-[300px]">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#71717a]" />
               <input
                 type="text"
                 placeholder="Filter by file path..."
                 value={filePathFilter}
                 onChange={(e) => setFilePathFilter(e.target.value)}
-                className="glass-input"
-                style={{ paddingLeft: "36px" }}
+                className="glass-input-field pl-10"
               />
             </div>
 
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="flex gap-2">
               {["all", "open", "accepted", "rejected"].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setDriftFilter(filter)}
-                  className={`btn-glass-secondary ${driftFilter === filter ? "active" : ""}`}
-                  style={{
-                    padding: "6px 12px",
-                    textTransform: "capitalize",
-                    backgroundColor: driftFilter === filter ? "rgba(99, 102, 241, 0.1)" : "transparent",
-                    color: driftFilter === filter ? "#818cf8" : "#9ca3af",
-                    borderColor: driftFilter === filter ? "rgba(99, 102, 241, 0.3)" : "rgba(255,255,255,0.1)"
-                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition capitalize ${
+                    driftFilter === filter ? "bg-[#00D9FF]/10 text-[#00D9FF] border border-[#00D9FF]/20" : "text-[#71717a] hover:text-white"
+                  }`}
                 >
                   {filter}
                 </button>
@@ -1314,77 +1403,61 @@ function RepositoryDetailPanel() {
           </div>
 
           {filteredDrifts.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>
-              No drift issues found. Documentation looks healthy!
+            <div className="py-12 text-center text-xs text-[#71717a]">
+              No drift logs found matching filters. Documentation is healthy.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div className="flex flex-col gap-6">
               {filteredDrifts.map((drift) => (
                 <div
                   key={drift._id}
-                  className="glass-card-premium"
-                  style={{
-                    padding: "24px"
-                  }}
+                  className="glass-panel-premium flex flex-col gap-4"
                 >
-                  <div style={{ display: "flex", justify: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
-                      <code style={{ fontSize: "13px", fontWeight: "700", color: "#818cf8" }}>{drift.filePath}</code>
-                      <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                        <span className={`status-pill-premium ${drift.severity === "high" ? "danger" : drift.severity === "medium" ? "warning" : "success"}`}>
+                      <code className="text-xs font-bold text-[#00D9FF] font-mono break-all">{drift.filePath}</code>
+                      <div className="flex gap-2 mt-2">
+                        <span className={`status-pill-premium ${drift.severity === "high" ? "status-pill-danger" : drift.severity === "medium" ? "status-pill-warning" : "status-pill-success"}`}>
                           {drift.severity} severity
                         </span>
-                        <span className="status-pill-premium" style={{
-                          backgroundColor: "rgba(255,255,255,0.05)", color: "#d1d5db", borderColor: "rgba(255,255,255,0.1)"
-                        }}>{drift.type}</span>
-                        <span style={{ fontSize: "10px", color: "#9ca3af", display: "flex", alignItems: "center" }}>AI Confidence: {drift.confidence}%</span>
+                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[9px] font-bold text-[#a1a1aa] uppercase">{drift.type}</span>
+                        <span className="text-[10px] text-[#71717a] flex items-center">Confidence: {drift.confidence}%</span>
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div className="flex gap-2">
                       {drift.status === "open" ? (
                         <>
                           <button
                             onClick={() => driftMutation.mutate({ id: drift._id, action: "accepted" })}
-                            className="btn-glass-secondary"
-                            style={{
-                              color: "#10b981", borderColor: "rgba(16, 185, 129, 0.3)"
-                            }}
+                            className="px-2.5 py-1 text-[10px] font-bold text-[#10b981] border border-[#10b981]/10 bg-[#10b981]/5 rounded-lg"
                           >
                             ✓ Accept
                           </button>
                           <button
                             onClick={() => driftMutation.mutate({ id: drift._id, action: "rejected" })}
-                            className="btn-glass-danger"
+                            className="px-2.5 py-1 text-[10px] font-bold text-red-400 border border-red-500/10 bg-red-500/5 rounded-lg"
                           >
                             ✗ Reject
                           </button>
                         </>
                       ) : (
-                        <span className={`status-pill-premium ${drift.status === "accepted" ? "success" : "danger"}`}>
+                        <span className={`status-pill-premium ${drift.status === "accepted" ? "status-pill-success" : "status-pill-danger"}`}>
                           {drift.status === "accepted" ? "Applied" : "Rejected"}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
                     <div>
-                      <span style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>Current Documentation</span>
-                      <pre style={{
-                        backgroundColor: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px",
-                        padding: "16px", fontSize: "11px", color: "#d1d5db", overflowX: "auto", margin: "8px 0 0 0",
-                        boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)"
-                      }}>{drift.currentDocText}</pre>
+                      <span className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block mb-2">Current Doc comments</span>
+                      <pre className="p-4 rounded-xl border border-white/5 bg-black/40 text-[10.5px] text-[#d1d5db] font-mono overflow-x-auto shadow-inner">{drift.currentDocText}</pre>
                     </div>
 
                     <div>
-                      <span style={{ fontSize: "10px", color: "#818cf8", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>AI Suggestion</span>
-                      <pre style={{
-                        backgroundColor: "rgba(99, 102, 241, 0.05)", border: "1px solid rgba(99, 102, 241, 0.2)", borderRadius: "8px",
-                        padding: "16px", fontSize: "11px", color: "#a5b4fc", overflowX: "auto", margin: "8px 0 0 0",
-                        boxShadow: "inset 0 2px 10px rgba(0,0,0,0.3)"
-                      }}>{drift.suggestion}</pre>
+                      <span className="text-[9px] font-bold text-[#00D9FF] uppercase tracking-wider block mb-2">AI Code Suggestion</span>
+                      <pre className="p-4 rounded-xl border border-[#00D9FF]/20 bg-[#00D9FF]/5 text-[10.5px] text-[#a5b4fc] font-mono overflow-x-auto shadow-inner">{drift.suggestion}</pre>
                     </div>
                   </div>
                 </div>
@@ -1394,49 +1467,36 @@ function RepositoryDetailPanel() {
         </div>
       )}
 
-      {/* TAB 2: TIMELINE */}
+      {/* TAB 2: INDEXING HISTORY */}
       {activeTab === "timeline" && (
-        <div>
+        <div className="flex flex-col gap-4">
           {timeline?.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>
-              No commit history found. Scan the repository first.
+            <div className="py-12 text-center text-xs text-[#71717a]">
+              No repository commits timeline found. Trigger a scan first.
             </div>
           ) : (
-            <div style={{ position: "relative", paddingLeft: "32px", boxSizing: "border-box" }}>
-              <div style={{ position: "absolute", left: "12px", top: "10px", width: "2px", height: "calc(100% - 20px)", background: "linear-gradient(to bottom, rgba(99,102,241,0.5), rgba(255,255,255,0.05))" }} />
+            <div className="relative pl-6 box-sizing-border">
+              <div className="absolute left-[7px] top-2 bottom-2 w-[1px] bg-gradient-to-b from-[#00D9FF] to-white/5" />
               
-              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div className="flex flex-col gap-5">
                 {timeline.map((commit) => (
-                  <div key={commit._id} style={{ position: "relative" }}>
-                    {/* Circle timeline dot */}
-                    <div style={{
-                      position: "absolute", left: "-26px", top: "4px", width: "10px", height: "10px",
-                      borderRadius: "50%", backgroundColor: "#818cf8", border: "2px solid #000",
-                      boxShadow: "0 0 10px rgba(129, 140, 248, 0.5)"
-                    }} />
+                  <div key={commit._id} className="relative">
+                    {/* Circle Timeline Dot */}
+                    <div className="absolute left-[-22px] top-1.5 w-2 h-2 rounded-full bg-[#00D9FF] border-2 border-black shadow-[0_0_8px_#00D9FF]" />
 
-                    <div className="glass-card-premium" style={{ padding: "16px" }}>
-                      <div style={{ display: "flex", justify: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                        <code style={{ fontSize: "11px", color: "#9ca3af", letterSpacing: "0.05em" }}>
-                          {commit.commitSha.substring(0, 7)}
-                        </code>
-                        <span style={{ fontSize: "10px", color: "#6b7280", fontWeight: "600" }}>
-                          {timeAgo(commit.date)}
-                        </span>
+                    <div className="glass-panel-premium p-4 flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-[10px]">
+                        <code className="text-[#a1a1aa] font-mono">{commit.commitSha.substring(0, 7)}</code>
+                        <span className="text-[#71717a]">{timeAgo(commit.date)}</span>
                       </div>
 
-                      <p style={{ fontSize: "13px", fontWeight: "800", color: "#f3f4f6", margin: "0 0 10px 0" }}>
-                        {commit.message}
-                      </p>
+                      <p className="text-xs font-bold text-white leading-relaxed">{commit.message}</p>
 
-                      <div style={{ display: "flex", justify: "space-between", alignItems: "center", fontSize: "11px", color: "#9ca3af" }}>
-                        <span>by <strong style={{ color: "#d1d5db" }}>{commit.author}</strong></span>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          {commit.filesChanged.map((f, idx) => (
-                            <span key={idx} style={{
-                              fontSize: "9px", backgroundColor: "rgba(255,255,255,0.05)", color: "#d1d5db",
-                              padding: "2px 6px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)"
-                            }}>{f}</span>
+                      <div className="flex justify-between items-center text-[10px] text-[#71717a] mt-2">
+                        <span>by <strong className="text-white font-semibold">{commit.author}</strong></span>
+                        <div className="flex gap-2">
+                          {commit.filesChanged.slice(0, 3).map((f, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] text-[#a1a1aa] font-mono">{f}</span>
                           ))}
                         </div>
                       </div>
@@ -1449,16 +1509,16 @@ function RepositoryDetailPanel() {
         </div>
       )}
 
-      {/* TAB 3: KNOWLEDGE CHAT */}
+      {/* TAB 3: AI GROUNDED CHAT */}
       {activeTab === "chat" && (
         <RepositoryChatPanel repoId={repoId} />
       )}
-    </div>
+    </motion.div>
   );
 }
 
 // -------------------------------------------------------------
-// NESTED CHAT COMPONENT (WITH INTERNAL CHAT STATE HOOKS)
+// NESTED CHAT COMPONENT
 // -------------------------------------------------------------
 function RepositoryChatPanel({ repoId }) {
   const { showToast } = useToast();
@@ -1467,25 +1527,22 @@ function RepositoryChatPanel({ repoId }) {
   const [loading, setLoading] = useState(false);
 
   const suggestedQuestions = [
-    "Why was this repository created?",
-    "Who are the main contributors?",
-    "What was the last major change?",
-    "Are there any security-related commits?"
+    "Explain the purpose of this codebase.",
+    "Show the main contributor analytics.",
+    "Summarize recent architecture drift events.",
+    "Are there missing developer documentation blocks?"
   ];
 
   const handleSend = async (qText) => {
     const textToSend = qText || question;
     if (!textToSend.trim()) return;
 
-    // Append user message
     setMessages((prev) => [...prev, { role: "user", text: textToSend }]);
     if (!qText) setQuestion("");
     setLoading(true);
 
     try {
       const res = await API.post(`/chat/${repoId}`, { question: textToSend });
-      
-      // Append AI response
       setMessages((prev) => [
         ...prev,
         {
@@ -1503,38 +1560,27 @@ function RepositoryChatPanel({ repoId }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "480px", justifyContent: "space-between", boxSizing: "border-box" }}>
-      {/* Scrollable chat body */}
-      <div className="glass-card-premium" style={{
-        flexGrow: 1, overflowY: "auto", padding: "16px",
-        display: "flex", flexDirection: "column", gap: "16px", marginBottom: "16px",
-        boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)"
-      }}>
+    <div className="flex flex-col justify-between min-h-[480px] gap-4">
+      {/* Scrollable Chat Body */}
+      <div className="glass-panel-premium flex-grow overflow-y-auto max-h-[400px] p-4 flex flex-col gap-4">
         {messages.length === 0 ? (
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            height: "100%", textAlign: "center", gap: "16px"
-          }}>
-            <div style={{ padding: "12px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(16,185,129,0.2))", boxShadow: "0 0 20px rgba(99,102,241,0.2)" }}>
-              <MessageSquare size={32} style={{ color: "#818cf8" }} />
+          <div className="flex flex-col items-center justify-center text-center py-12 gap-4">
+            <div className="p-3.5 rounded-full bg-[#00D9FF]/15 border border-[#00D9FF]/20 shadow-[0_0_20px_rgba(0,217,255,0.15)]">
+              <MessageSquare size={24} className="text-[#00D9FF]" />
             </div>
             <div>
-              <h4 style={{ fontSize: "14px", fontWeight: "800", color: "#f3f4f6", margin: "0 0 6px 0", letterSpacing: "0.02em" }}>Repo Knowledge Assistant</h4>
-              <p style={{ fontSize: "11px", color: "#9ca3af", maxWidth: "260px", margin: 0, lineHeight: "1.5" }}>
-                Ask questions regarding commit histories, design decisions, and system requirements.
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">Repository Knowledge Companion</h4>
+              <p className="text-[11px] text-[#71717a] mt-1 max-w-[280px] leading-relaxed">
+                Query engineering logic, design patterns, file dependencies, and local git histories.
               </p>
             </div>
-            
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", maxWidth: "480px", width: "100%", marginTop: "10px" }}>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-[480px] w-full mt-4">
               {suggestedQuestions.map((sq, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSend(sq)}
-                  className="btn-glass-secondary"
-                  style={{
-                    padding: "12px", textAlign: "left", fontSize: "11px",
-                    color: "#d1d5db", whiteSpace: "normal", height: "auto"
-                  }}
+                  className="px-3 py-2 text-left text-[11px] text-[#a1a1aa] border border-white/5 bg-white/5 rounded-lg hover:text-white hover:border-[#00D9FF]/25 transition"
                 >
                   {sq}
                 </button>
@@ -1543,36 +1589,28 @@ function RepositoryChatPanel({ repoId }) {
           </div>
         ) : (
           messages.map((msg, idx) => (
-            <div key={idx} style={{
-              display: "flex", justify: msg.role === "user" ? "flex-end" : "flex-start",
-              width: "100%"
-            }}>
+            <div key={idx} className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "user" ? (
-                <div style={{
-                  background: "linear-gradient(135deg, #4f46e5, #6366f1)", color: "#fff", padding: "12px 16px", borderRadius: "12px 12px 0 12px",
-                  fontSize: "12px", fontWeight: "600", maxWidth: "70%", boxShadow: "0 4px 15px rgba(99,102,241,0.3)"
-                }}>{msg.text}</div>
+                <div className="px-4 py-2.5 rounded-xl rounded-tr-none bg-gradient-to-tr from-[#00D9FF] to-[#7C3AED] text-black text-xs font-semibold max-w-[70%] shadow-lg">
+                  {msg.text}
+                </div>
               ) : (
-                <div style={{
-                  backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px 12px 12px 0",
-                  padding: "16px", maxWidth: "80%", color: "#f3f4f6", backdropFilter: "blur(10px)"
-                }}>
-                  <div style={{ display: "flex", justify: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "8px" }}>
-                    <span style={{ fontSize: "10px", fontWeight: "800", color: "#818cf8", letterSpacing: "0.05em", textTransform: "uppercase" }}>CodeMemory Assistant</span>
-                    <span className="status-pill-premium success">
+                <div className="px-4 py-4 rounded-xl rounded-tl-none border border-white/5 bg-[#121214] text-xs text-white max-w-[80%] flex flex-col gap-3">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span className="text-[9px] font-black text-[#00D9FF] uppercase tracking-wider">WhyCode Companion</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#10b981]/5 border border-[#10b981]/10 text-[9px] font-bold text-[#10b981] uppercase">
                       Confidence: {msg.confidence}%
                     </span>
                   </div>
-                  
-                  <p style={{ fontSize: "12px", lineHeight: "1.6", margin: "0 0 12px 0" }}>{msg.text}</p>
+                  <p className="leading-relaxed text-[#d1d5db]">{msg.text}</p>
                   
                   {msg.sources?.length > 0 && (
-                    <div>
-                      <span style={{ fontSize: "9px", color: "#9ca3af", textTransform: "uppercase", fontWeight: "750", letterSpacing: "0.05em" }}>Reference Excerpts:</span>
-                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
+                    <div className="mt-2 border-t border-white/5 pt-2">
+                      <span className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block">Retrieved Contexts:</span>
+                      <div className="flex gap-2 flex-wrap mt-2">
                         {msg.sources.map((src, sIdx) => (
-                          <span key={sIdx} style={{ fontSize: "9px", padding: "4px 8px", borderRadius: "6px", backgroundColor: "rgba(0,0,0,0.3)", color: "#d1d5db", border: "1px solid rgba(255,255,255,0.05)" }}>
-                            {src.reference} <span style={{ color: "#9ca3af" }}>({src.type})</span>
+                          <span key={sIdx} className="px-2 py-0.5 rounded bg-black/40 text-[9px] text-[#a1a1aa] border border-white/5">
+                            {src.reference} <span className="text-[9px] text-[#52525b]">({src.type})</span>
                           </span>
                         ))}
                       </div>
@@ -1585,29 +1623,27 @@ function RepositoryChatPanel({ repoId }) {
         )}
 
         {loading && (
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#818cf8", padding: "10px" }}>
-            <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⚡</span>
-            <span style={{ fontWeight: "600" }}>AI explanation agent processing...</span>
+          <div className="flex items-center gap-2 text-xs text-[#00D9FF] p-2">
+            <span className="animate-spin">⚡</span>
+            <span className="font-bold">Analyzing workspace repositories...</span>
           </div>
         )}
       </div>
 
-      {/* Input */}
-      <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} style={{ display: "flex", gap: "10px" }}>
+      {/* Input row */}
+      <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 mt-2">
         <input
           type="text"
           placeholder="Ask a question about this repository's commits..."
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           disabled={loading}
-          className="glass-input"
-          style={{ flexGrow: 1 }}
+          className="glass-input-field flex-grow"
         />
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          className="btn-glass-primary"
-          style={{ padding: "0 20px" }}
+          className="px-4 bg-white hover:bg-white/90 text-black font-bold rounded-lg transition disabled:opacity-50"
         >
           <Send size={14} />
         </button>
@@ -1631,24 +1667,29 @@ function KnowledgeChatPanel() {
   });
 
   return (
-    <div>
-      <div style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>Knowledge Chat</h2>
-        <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Interact with AI agents grounded in repository commit memories.</p>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
+      <div>
+        <h2 className="text-2xl font-black text-white">Global Knowledge Companion</h2>
+        <p className="text-xs text-[#71717a] mt-1">Grounded developer query environment linked with repository indices.</p>
       </div>
 
-      <div className="glass-card-premium" style={{ padding: "24px" }}>
-        <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "12px", color: "#9ca3af", fontWeight: "700" }}>Select Repository:</span>
+      <div className="glass-panel-premium flex flex-col gap-5">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-[#a1a1aa]">Scope Repository:</span>
           <select
             value={selectedRepoId}
             onChange={(e) => setSelectedRepoId(e.target.value)}
-            className="glass-input"
-            style={{ width: "240px", padding: "8px 12px" }}
+            className="glass-input-field max-w-[280px]"
           >
-            <option value="">-- Select Repo --</option>
+            <option value="" className="bg-[#0c0c0e]">-- Select Repo --</option>
             {repos?.map((repo) => (
-              <option key={repo._id} value={repo._id} style={{ backgroundColor: "#020202", color: "#fff" }}>{repo.fullName}</option>
+              <option key={repo._id} value={repo._id} className="bg-[#0c0c0e]">{repo.fullName}</option>
             ))}
           </select>
         </div>
@@ -1656,12 +1697,12 @@ function KnowledgeChatPanel() {
         {selectedRepoId ? (
           <RepositoryChatPanel repoId={selectedRepoId} />
         ) : (
-          <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>
-            Please select a connected repository to begin chat.
+          <div className="py-12 text-center text-xs text-[#71717a]">
+            Please select a configured repository to initialize the AI grounding session.
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -1719,7 +1760,7 @@ function CompanyProfilePanel() {
   const [selectedRepos, setSelectedRepos] = useState([]);
 
   // Fetch candidate repositories from App Installation
-  const { data: candidateRepos, isLoading: loadingCandidates, refetch: refetchCandidates } = useQuery({
+  const { data: candidateRepos, isLoading: loadingCandidates } = useQuery({
     queryKey: ["candidateRepos"],
     queryFn: async () => {
       const res = await API.get("/github/repositories");
@@ -1782,7 +1823,6 @@ function CompanyProfilePanel() {
     }
   });
 
-  // Toggle checkbox helper
   const handleCheckboxChange = (fullName) => {
     setSelectedRepos((prev) =>
       prev.includes(fullName) ? prev.filter((r) => r !== fullName) : [...prev, fullName]
@@ -1821,85 +1861,83 @@ function CompanyProfilePanel() {
   if (isLoading) return <LoadingSpinner size="large" />;
 
   return (
-    <div>
-      <div style={{ marginBottom: "32px" }}>
-        <h2 style={{ fontSize: "22px", fontWeight: "900", letterSpacing: "-0.03em", margin: "0 0 6px 0" }}>Company Profile</h2>
-        <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Configure workspace metadata and credentials.</p>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col gap-6"
+    >
+      <div>
+        <h2 className="text-2xl font-black text-white">Workspace Configuration</h2>
+        <p className="text-xs text-[#71717a] mt-1">Configure company profiles, authorization keys, and change admin credentials.</p>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Profile Card Info */}
-        <div className="glass-card-premium" style={{ flex: "1 1 360px", padding: "24px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 16px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "12px", color: "#f3f4f6" }}>Workspace Info</h3>
+        <div className="glass-panel-premium flex flex-col gap-4">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3">Company Metadata</h3>
           
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
+          <div className="flex flex-col items-center gap-4 py-4">
             {profileLogo ? (
-              <img src={profileLogo} alt="Logo" style={{ width: "64px", height: "64px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 15px rgba(0,0,0,0.4)" }} />
+              <img src={profileLogo} alt="Logo" className="w-16 h-16 rounded-xl border border-white/10 shadow-lg object-cover" />
             ) : (
-              <div style={{
-                width: "64px", height: "64px", borderRadius: "12px",
-                background: "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: "900", color: "#fff",
-                boxShadow: "0 4px 15px rgba(99,102,241,0.3)"
-              }}>
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-tr from-[#00D9FF] to-[#7C3AED] flex items-center justify-center text-xl font-bold text-black shadow-lg">
                 {profile?.name?.substring(0, 2).toUpperCase()}
               </div>
             )}
 
             {!editMode ? (
-              <div style={{ textAlign: "center" }}>
-                <h4 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 4px 0", color: "#f3f4f6" }}>{profile?.name}</h4>
-                <span style={{ fontSize: "11px", color: "#9ca3af" }}>License Owner: {profile?.ownerId?.email}</span>
-                <p style={{ fontSize: "10px", color: "#9ca3af", margin: "8px 0 0 0" }}>Subscription: <strong style={{ color: "#06b6d4", textTransform: "uppercase" }}>{profile?.plan}</strong></p>
+              <div className="text-center">
+                <h4 className="text-sm font-bold text-white">{profile?.name}</h4>
+                <p className="text-[10px] text-[#71717a] mt-1">Licence Owner: {profile?.ownerId?.email}</p>
+                <p className="text-[10px] text-[#71717a] mt-2">Subscription plan: <strong className="text-[#00D9FF] uppercase">{profile?.plan}</strong></p>
               </div>
             ) : (
-              <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div className="w-full flex flex-col gap-4">
                 <div>
-                  <label style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "4px" }}>Company Name</label>
+                  <label className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block mb-2">Company Name</label>
                   <input
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    className="glass-input"
+                    className="glass-input-field"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "4px" }}>Logo URL</label>
+                  <label className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block mb-2">Logo Image URL</label>
                   <input
                     type="text"
                     value={profileLogo}
                     onChange={(e) => setProfileLogo(e.target.value)}
                     placeholder="https://example.com/logo.png"
-                    className="glass-input"
+                    className="glass-input-field"
                   />
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+          <div className="flex gap-2 justify-end">
             {!editMode ? (
               <button
                 onClick={() => setEditMode(true)}
-                className="btn-glass-secondary"
-                style={{ padding: "8px 16px" }}
+                className="px-4 py-2 text-xs font-bold text-white border border-white/5 bg-white/5 rounded-lg"
               >
-                Edit Profile
+                Edit Metadata
               </button>
             ) : (
               <>
                 <button
                   onClick={() => setEditMode(false)}
-                  className="btn-glass-secondary"
-                  style={{ padding: "8px 16px" }}
+                  className="px-4 py-2 text-xs font-bold text-white border border-white/5 bg-white/5 rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => updateProfileMutation.mutate()}
-                  className="btn-glass-primary"
-                  style={{ padding: "8px 16px" }}
+                  className="px-4 py-2 text-xs font-bold text-black bg-white rounded-lg"
                 >
                   Save Changes
                 </button>
@@ -1908,103 +1946,88 @@ function CompanyProfilePanel() {
           </div>
         </div>
 
-        {/* Security / Password Card */}
-        <div className="glass-card-premium" style={{ flex: "1 1 360px", padding: "24px" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: "800", margin: "0 0 16px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "12px", color: "#f3f4f6" }}>Change Password</h3>
+        {/* Change Password Card */}
+        <div className="glass-panel-premium flex flex-col gap-4">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3">Update Workspace Key</h3>
           
           {passwordError && (
-            <div style={{
-              backgroundColor: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)",
-              borderRadius: "8px", padding: "12px", color: "#ef4444", fontSize: "11px", marginBottom: "16px", textAlign: "center",
-              boxShadow: "0 2px 10px rgba(239,68,68,0.1)"
-            }}>{passwordError}</div>
+            <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/5 text-red-400 text-xs text-center">{passwordError}</div>
           )}
 
           {passwordSuccess && (
-            <div style={{
-              backgroundColor: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)",
-              borderRadius: "8px", padding: "12px", color: "#10b981", fontSize: "11px", marginBottom: "16px", textAlign: "center",
-              boxShadow: "0 2px 10px rgba(16,185,129,0.1)"
-            }}>{passwordSuccess}</div>
+            <div className="p-3 rounded-lg border border-[#10b981]/25 bg-[#10b981]/5 text-[#10b981] text-xs text-center">{passwordSuccess}</div>
           )}
 
-          <form onSubmit={handlePasswordChange} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <form onSubmit={handlePasswordChange} className="flex flex-col gap-3">
             <div>
-              <label style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "4px" }}>Current Password</label>
+              <label className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block mb-2">Current Password</label>
               <input
                 type="password"
                 required
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="glass-input"
+                className="glass-input-field"
               />
             </div>
             <div>
-              <label style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "4px" }}>New Password</label>
+              <label className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block mb-2">New Password</label>
               <input
                 type="password"
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="glass-input"
+                className="glass-input-field"
               />
             </div>
             <div>
-              <label style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase", color: "#9ca3af", display: "block", marginBottom: "4px" }}>Confirm New Password</label>
+              <label className="text-[9px] font-bold text-[#71717a] uppercase tracking-wider block mb-2">Confirm New Password</label>
               <input
                 type="password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="glass-input"
+                className="glass-input-field"
               />
             </div>
 
             <button
               type="submit"
               disabled={updatingPassword}
-              className="btn-glass-primary"
-              style={{
-                padding: "10px", marginTop: "8px",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: "6px"
-              }}
+              className="w-full h-11 bg-white hover:bg-white/90 text-black font-bold text-xs rounded-lg mt-3 flex items-center justify-center gap-2"
             >
               {updatingPassword && <LoadingSpinner />}
               <span>Update Password</span>
             </button>
           </form>
         </div>
-
       </div>
 
       {/* GitHub App Integration Panel */}
-      <div className="glass-card-premium" style={{ marginTop: "32px", padding: "32px", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px", marginBottom: "20px" }}>
+      <div className="glass-panel-premium flex flex-col gap-5 mt-4">
+        <div className="flex justify-between items-start flex-wrap gap-4">
           <div>
-            <h3 style={{ fontSize: "16px", fontWeight: "900", margin: "0 0 6px 0", display: "flex", alignItems: "center", gap: "8px", color: "#f3f4f6" }}>
-              <GitFork size={18} style={{ color: "#818cf8" }} />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <GitFork size={14} className="text-[#00D9FF]" />
               <span>GitHub App Integration</span>
             </h3>
-            <p style={{ fontSize: "13px", color: "#9ca3af", margin: 0 }}>
-              Authorize CodeMemory to automatically synchronize repositories, developers, and code commits in real time.
+            <p className="text-[11px] text-[#71717a] mt-1 max-w-[480px] leading-relaxed">
+              Link your organization's GitHub accounts to authorize WhyCode to automatically scan repositories, parse AST modules, and map code changes.
             </p>
           </div>
 
           <div>
             {profile?.github?.connected ? (
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div className="flex gap-2">
                 <button
                   onClick={() => setRepoModalOpen(true)}
-                  className="btn-glass-primary"
-                  style={{ padding: "10px 18px" }}
+                  className="px-4 py-2 text-xs font-bold text-black bg-white rounded-lg"
                 >
-                  Manage Monitored Repositories
+                  Manage Monitored Repos
                 </button>
                 <button
                   onClick={() => triggerSyncMutation.mutate()}
                   disabled={triggerSyncMutation.isPending}
-                  className="btn-glass-secondary"
-                  style={{ padding: "10px 18px" }}
+                  className="px-4 py-2 text-xs font-bold text-white border border-white/5 bg-white/5 rounded-lg"
                 >
                   {triggerSyncMutation.isPending ? "Syncing..." : "Sync Metadata"}
                 </button>
@@ -2013,8 +2036,7 @@ function CompanyProfilePanel() {
               <button
                 onClick={() => connectAppMutation.mutate()}
                 disabled={connectAppMutation.isPending}
-                className="btn-glass-primary"
-                style={{ padding: "10px 20px" }}
+                className="px-4 py-2 text-xs font-bold text-black bg-white rounded-lg"
               >
                 {connectAppMutation.isPending ? "Connecting..." : "Connect GitHub App"}
               </button>
@@ -2022,33 +2044,25 @@ function CompanyProfilePanel() {
           </div>
         </div>
 
-        {/* Integration Status Card */}
-        <div style={{
-          backgroundColor: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: "20px",
-          display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px",
-          boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)"
-        }}>
+        {/* Integration Status Block */}
+        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <span style={{
-                width: "8px", height: "8px", borderRadius: "50%",
-                backgroundColor: profile?.github?.connected ? "#10b981" : "#6b7280",
-                boxShadow: profile?.github?.connected ? "0 0 8px #10b981" : "none"
-              }} />
-              <span style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", color: profile?.github?.connected ? "#10b981" : "#9ca3af", letterSpacing: "0.05em" }}>
-                {profile?.github?.connected ? "Status: Connected" : "Status: Not Connected"}
+            <div className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                profile?.github?.connected ? "bg-[#10b981] shadow-[0_0_8px_#10b981]" : "bg-[#52525b]"
+              }`} />
+              <span className={`text-[10px] font-black uppercase tracking-wider ${profile?.github?.connected ? "text-[#10b981]" : "text-[#71717a]"}`}>
+                {profile?.github?.connected ? "Status: Active Authorization" : "Status: Disconnected"}
               </span>
             </div>
             {profile?.github?.connected && (
-              <p style={{ fontSize: "12px", color: "#d1d5db", margin: 0 }}>
-                Linked to organization <strong style={{ color: "#fff" }}>{profile.github.organization}</strong> (Installation ID: {profile.github.installationId}).
+              <p className="text-[11px] text-[#a1a1aa] mt-2 leading-relaxed">
+                Workspace synced with organization <strong className="text-white">{profile.github.organization}</strong> (Installation ID: {profile.github.installationId}).
               </p>
             )}
           </div>
           {profile?.github?.connected && (
-            <div style={{ fontSize: "11px", color: "#6b7280", textAlign: "right" }}>
-              <div>Last synchronized: {new Date(profile.github.lastSync).toLocaleString()}</div>
-            </div>
+            <span className="text-[10px] text-[#71717a]">Last synchronized: {new Date(profile.github.lastSync).toLocaleString()}</span>
           )}
         </div>
       </div>
@@ -2058,64 +2072,53 @@ function CompanyProfilePanel() {
         <div style={{
           position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
           backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)",
-          display: "flex", alignItems: "center", justify: "center", zIndex: 9999, fontFamily: "'Inter', sans-serif"
+          display: "flex", alignItems: "center", justify: "center", zIndex: 9999
         }}>
-          <div className="glass-card-premium" style={{
-            width: "100%", maxWidth: "500px", padding: "32px", border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.5), inset 0 2px 20px rgba(255,255,255,0.05)"
-          }}>
-            <h3 style={{ fontSize: "18px", fontWeight: "900", color: "#f9fafb", margin: "0 0 8px 0" }}>
+          <div className="glass-panel-premium w-full max-w-[500px] p-6 border border-white/10 flex flex-col gap-4 shadow-2xl">
+            <h3 className="text-sm font-black text-white uppercase tracking-wider">
               Manage Monitored Repositories
             </h3>
-            <p style={{ fontSize: "12px", color: "#9ca3af", margin: "0 0 24px 0", lineHeight: "1.5" }}>
-              Select which organization repositories CodeMemory should monitor, scan, and parse using AI.
+            <p className="text-xs text-[#71717a] leading-relaxed">
+              Select which organization repositories WhyCode should monitor, scan, and parse using AI.
             </p>
 
             {loadingCandidates ? (
-              <div style={{ display: "flex", justifyContent: "center", padding: "30px" }}>
+              <div className="flex justify-center py-6">
                 <LoadingSpinner />
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "250px", overflowY: "auto", marginBottom: "24px" }}>
+              <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto pr-1">
                 {candidateRepos?.map((repo) => (
                   <label
                     key={repo.id}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px",
-                      backgroundColor: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(99,102,241,0.1)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.3)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.3)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
+                    className="flex items-center gap-3 p-3 bg-black/40 border border-white/5 rounded-xl cursor-pointer hover:bg-white/5 transition"
                   >
                     <input
                       type="checkbox"
                       checked={selectedRepos.includes(repo.fullName)}
                       onChange={() => handleCheckboxChange(repo.fullName)}
-                      style={{ cursor: "pointer", accentColor: "#6366f1" }}
+                      style={{ cursor: "pointer", accentColor: "#00D9FF" }}
                     />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "12px", fontWeight: "700", color: "#fff" }}>{repo.fullName}</div>
-                      {repo.language && <span style={{ fontSize: "10px", color: "#818cf8" }}>● {repo.language}</span>}
+                    <div className="flex-grow min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{repo.fullName}</div>
+                      {repo.language && <span className="text-[9px] text-[#00D9FF] font-mono">● {repo.language}</span>}
                     </div>
                   </label>
                 ))}
               </div>
             )}
 
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+            <div className="flex gap-2 justify-end mt-2">
               <button
                 onClick={() => setRepoModalOpen(false)}
-                className="btn-glass-secondary"
-                style={{ padding: "10px 18px" }}
+                className="px-4 py-2 text-xs font-bold text-white border border-white/5 bg-white/5 rounded-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={() => saveReposMutation.mutate(selectedRepos)}
                 disabled={saveReposMutation.isPending}
-                className="btn-glass-primary"
-                style={{ padding: "10px 20px" }}
+                className="px-4 py-2 text-xs font-bold text-black bg-white rounded-lg"
               >
                 {saveReposMutation.isPending ? "Saving..." : "Save Selection"}
               </button>
@@ -2123,6 +2126,6 @@ function CompanyProfilePanel() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

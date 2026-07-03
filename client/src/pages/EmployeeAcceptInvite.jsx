@@ -140,7 +140,7 @@ export default function EmployeeAcceptInvite() {
             You're Invited!
           </h2>
           <p className="auth-subtitle">
-            Join <strong style={{ color: "#ffffff" }}>{companyName}</strong> on CodeMemory
+            Join <strong style={{ color: "#ffffff" }}>{companyName}</strong> on WhyCode
           </p>
         </div>
 
@@ -241,7 +241,7 @@ export default function EmployeeAcceptInvite() {
             disabled={submitting}
             className="btn-auth-submit"
           >
-            {submitting ? "Joining Workspace..." : "Join CodeMemory →"}
+            {submitting ? "Joining Workspace..." : "Join WhyCode →"}
           </button>
         </form>
       </div>
