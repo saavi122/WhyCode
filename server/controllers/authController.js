@@ -495,9 +495,112 @@ export const githubCallback = async (req, res, next) => {
       expiresIn: "30d",
     });
 
-    const frontendRedirectUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/dashboard?token=${token}`;
+    const frontendRedirectUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/auth/callback?token=${token}`;
     res.redirect(frontendRedirectUrl);
   } catch (err) {
     next(err);
   }
 };
+
+// ─── GOOGLE OAUTH ────────────────────────────────────────────────────────────
+
+// GET /api/auth/google — redirect user to Google consent screen
+export const googleAuthorize = (req, res) => {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: process.env.GOOGLE_REDIRECT_URI || `${process.env.SERVER_URL || "http://localhost:5000"}/api/auth/google/callback`,
+    response_type: "code",
+    scope: "openid email profile",
+    access_type: "offline",
+    prompt: "select_account",
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+};
+
+// GET /api/auth/google/callback — exchange code for tokens, upsert user, issue JWT
+export const googleCallback = async (req, res, next) => {
+  try {
+    const { code } = req.query;
+    if (!code) {
+      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=no_code`);
+    }
+
+    // 1. Exchange authorization code for tokens
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.SERVER_URL || "http://localhost:5000"}/api/auth/google/callback`;
+    const tokenRes = await axios.post("https://oauth2.googleapis.com/token", new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }).toString(), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+
+    const { access_token, id_token } = tokenRes.data;
+    if (!access_token) {
+      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=token_exchange_failed`);
+    }
+
+    // 2. Fetch Google user profile
+    const profileRes = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    const googleUser = profileRes.data;
+    // googleUser = { id, email, name, picture, verified_email }
+    if (!googleUser.email) {
+      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=no_email`);
+    }
+
+    const email = googleUser.email.toLowerCase();
+
+    // 3. Find existing user by googleId or email
+    let user = await User.findOne({ googleId: googleUser.id });
+    if (!user) {
+      user = await User.findOne({ email });
+    }
+
+    if (user) {
+      // Attach googleId if not set
+      if (!user.googleId) user.googleId = googleUser.id;
+      user.avatarUrl = user.avatarUrl || googleUser.picture;
+      await user.save();
+    } else {
+      // New user — create company + owner account
+      let company = await Company.findOne({ name: "Default Corporation" });
+      if (!company) {
+        company = await Company.create({ name: "Default Corporation", email: "corp@whycode.local" });
+      }
+      const hashedPassword = await bcrypt.hash(process.env.JWT_SECRET + googleUser.id, 12);
+      user = await User.create({
+        name: googleUser.name || email.split("@")[0],
+        email,
+        password: hashedPassword,
+        googleId: googleUser.id,
+        avatarUrl: googleUser.picture,
+        role: "company",
+        company: company._id,
+      });
+      company.ownerId = user._id;
+      await company.save();
+    }
+
+    if (user.isActive === false) {
+      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=account_disabled`);
+    }
+
+    // 4. Issue JWT and redirect to frontend
+    const token = jwt.sign(
+      { id: user._id, role: user.role, company: user.company },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    const frontendRedirectUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/auth/callback?token=${token}`;
+    res.redirect(frontendRedirectUrl);
+  } catch (err) {
+    next(err);
+  }
+};
+

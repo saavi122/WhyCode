@@ -1,5 +1,9 @@
 import express from "express";
-import { githubLogin, getMe, githubAuthorize, githubCallback, register, login, getMeProfile, employeeLogin } from "../controllers/authController.js";
+import {
+  githubLogin, getMe, githubAuthorize, githubCallback,
+  register, login, getMeProfile, employeeLogin,
+  googleAuthorize, googleCallback,
+} from "../controllers/authController.js";
 import protect from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -13,9 +17,13 @@ router.get("/me", protect, getMeProfile);
 // Mock / API Login method
 router.post("/github", githubLogin);
 
-// Real GitHub OAuth redirects (for linking company GitHub account)
-router.get("/github", githubAuthorize);
+// Real GitHub OAuth (login/signup via GitHub account)
+router.get("/github/authorize", githubAuthorize);
 router.get("/github/callback", githubCallback);
+
+// Real Google OAuth (login/signup via Google account)
+router.get("/google", googleAuthorize);
+router.get("/google/callback", googleCallback);
 
 router.get("/me-legacy", protect, getMe);
 

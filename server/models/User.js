@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     githubId: { type: String, unique: true, sparse: true },
     githubAccessToken: { type: String, select: false },
+    googleId: { type: String, unique: true, sparse: true },
     avatarUrl: { type: String },
   },
   { timestamps: true }

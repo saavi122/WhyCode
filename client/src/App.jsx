@@ -13,6 +13,7 @@ import EmployeeAcceptInvite from "./pages/EmployeeAcceptInvite";
 import Dashboard from "./pages/Dashboard";
 import RecruiterOS from "./pages/RecruiterOS";
 import AuthCallback from "./components/AuthCallback";
+// CompanyLogin is now unified into Login.jsx (tabbed UI)
 
 import { ToastProvider } from "./context/ToastContext";
 
@@ -27,7 +28,7 @@ export default function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/company/login" element={<Login />} />
+              <Route path="/company/login" element={<Login />} /> {/* unified tabbed login */}
               <Route path="/company/signup" element={<Signup />} />
               {/* Passwordless employee login */}
               <Route path="/employee/login" element={<EmployeeLogin />} />
