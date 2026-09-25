@@ -73,3 +73,21 @@ All protected endpoints require the header `Authorization: Bearer <JWT_TOKEN>`.
       "question": "Why did we add the SSO login callback refactoring?"
     }
     ```
+
+---
+
+## 7. Deployed App (Vercel) Credentials
+* **App URL:** https://why-code.vercel.app/
+
+### A. Admin
+* **Email:** `admin@codememory.com`
+* **Password:** `Admin@123`
+
+### B. Company
+* **Email:** `saavi@stripe.com`
+* **Password:** `12345678`
+
+### C. Employee
+* **Email:** `ruchi@stripe.com`
+* **Password:** `12345678`
+

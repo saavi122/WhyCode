@@ -37,6 +37,11 @@ const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL || "*", credentials: true }));
 app.use(express.json({ limit: "5mb" })); // larger limit for code/diff payloads
 
+// Health check endpoint for Uptime Robot / keeping server alive
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date() });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/repositories", repoRoutes);
 app.use("/api/scan", scanRoutes);
