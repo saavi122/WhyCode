@@ -12,6 +12,7 @@ import {
 import API from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StatCard from "../components/StatCard";
+import ReactMarkdown from "react-markdown";
 import "./EmployeeDashboard.css";
 
 export default function EmployeeDashboard() {
@@ -964,7 +965,62 @@ export default function EmployeeDashboard() {
                         key={index}
                         className={`chat-bubble ${msg.role === "user" ? "user" : "assistant"}`}
                       >
-                        {msg.text}
+                        {msg.role === "assistant" ? (
+                          <ReactMarkdown
+                            components={{
+                              h3: ({ children }) => (
+                                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#4ade80", marginBottom: "10px", marginTop: "4px" }}>{children}</h3>
+                              ),
+                              h4: ({ children }) => (
+                                <h4 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#94a3b8", marginBottom: "6px", marginTop: "10px" }}>{children}</h4>
+                              ),
+                              strong: ({ children }) => (
+                                <strong style={{ color: "#e2e8f0", fontWeight: 600 }}>{children}</strong>
+                              ),
+                              p: ({ children }) => (
+                                <p style={{ marginBottom: "8px", lineHeight: "1.6", color: "#cbd5e1" }}>{children}</p>
+                              ),
+                              ul: ({ children }) => (
+                                <ul style={{ paddingLeft: "18px", marginBottom: "8px", color: "#cbd5e1" }}>{children}</ul>
+                              ),
+                              li: ({ children }) => (
+                                <li style={{ marginBottom: "4px", lineHeight: "1.5" }}>{children}</li>
+                              ),
+                              code: ({ inline, children }) =>
+                                inline ? (
+                                  <code style={{ background: "rgba(255,255,255,0.08)", padding: "2px 6px", borderRadius: "4px", fontSize: "0.8rem", color: "#7dd3fc", fontFamily: "monospace" }}>{children}</code>
+                                ) : (
+                                  <pre style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "12px", overflowX: "auto", marginBottom: "10px" }}>
+                                    <code style={{ fontSize: "0.78rem", color: "#a5f3fc", fontFamily: "monospace", whiteSpace: "pre" }}>{children}</code>
+                                  </pre>
+                                ),
+                              table: ({ children }) => (
+                                <div style={{ overflowX: "auto", marginBottom: "10px" }}>
+                                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>{children}</table>
+                                </div>
+                              ),
+                              thead: ({ children }) => (
+                                <thead style={{ background: "rgba(255,255,255,0.06)" }}>{children}</thead>
+                              ),
+                              th: ({ children }) => (
+                                <th style={{ padding: "6px 12px", textAlign: "left", color: "#94a3b8", fontWeight: 600, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>{children}</th>
+                              ),
+                              td: ({ children }) => (
+                                <td style={{ padding: "6px 12px", color: "#cbd5e1", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{children}</td>
+                              ),
+                              em: ({ children }) => (
+                                <em style={{ color: "#a5b4fc", fontStyle: "italic" }}>{children}</em>
+                              ),
+                              hr: () => (
+                                <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.08)", margin: "12px 0" }} />
+                              ),
+                            }}
+                          >
+                            {msg.text}
+                          </ReactMarkdown>
+                        ) : (
+                          msg.text
+                        )}
                       </div>
                     ))}
                   </div>
