@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -968,52 +968,20 @@ export default function EmployeeDashboard() {
                         {msg.role === "assistant" ? (
                           <ReactMarkdown
                             components={{
-                              h3: ({ children }) => (
-                                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#4ade80", marginBottom: "10px", marginTop: "4px" }}>{children}</h3>
-                              ),
-                              h4: ({ children }) => (
-                                <h4 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#94a3b8", marginBottom: "6px", marginTop: "10px" }}>{children}</h4>
-                              ),
-                              strong: ({ children }) => (
-                                <strong style={{ color: "#e2e8f0", fontWeight: 600 }}>{children}</strong>
-                              ),
-                              p: ({ children }) => (
-                                <p style={{ marginBottom: "8px", lineHeight: "1.6", color: "#cbd5e1" }}>{children}</p>
-                              ),
-                              ul: ({ children }) => (
-                                <ul style={{ paddingLeft: "18px", marginBottom: "8px", color: "#cbd5e1" }}>{children}</ul>
-                              ),
-                              li: ({ children }) => (
-                                <li style={{ marginBottom: "4px", lineHeight: "1.5" }}>{children}</li>
-                              ),
-                              code: ({ inline, children }) =>
-                                inline ? (
-                                  <code style={{ background: "rgba(255,255,255,0.08)", padding: "2px 6px", borderRadius: "4px", fontSize: "0.8rem", color: "#7dd3fc", fontFamily: "monospace" }}>{children}</code>
-                                ) : (
-                                  <pre style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "12px", overflowX: "auto", marginBottom: "10px" }}>
-                                    <code style={{ fontSize: "0.78rem", color: "#a5f3fc", fontFamily: "monospace", whiteSpace: "pre" }}>{children}</code>
-                                  </pre>
-                                ),
-                              table: ({ children }) => (
-                                <div style={{ overflowX: "auto", marginBottom: "10px" }}>
-                                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>{children}</table>
-                                </div>
-                              ),
-                              thead: ({ children }) => (
-                                <thead style={{ background: "rgba(255,255,255,0.06)" }}>{children}</thead>
-                              ),
-                              th: ({ children }) => (
-                                <th style={{ padding: "6px 12px", textAlign: "left", color: "#94a3b8", fontWeight: 600, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>{children}</th>
-                              ),
-                              td: ({ children }) => (
-                                <td style={{ padding: "6px 12px", color: "#cbd5e1", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{children}</td>
-                              ),
-                              em: ({ children }) => (
-                                <em style={{ color: "#a5b4fc", fontStyle: "italic" }}>{children}</em>
-                              ),
-                              hr: () => (
-                                <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.08)", margin: "12px 0" }} />
-                              ),
+                              h3: ({children}) => <h3 style={{fontSize:"1rem",fontWeight:700,color:"#4ade80",margin:"8px 0 6px"}}>{children}</h3>,
+                              h4: ({children}) => <h4 style={{fontSize:"0.88rem",fontWeight:600,color:"#94a3b8",margin:"8px 0 4px"}}>{children}</h4>,
+                              p:  ({children}) => <p  style={{marginBottom:"6px",lineHeight:"1.65",color:"#cbd5e1"}}>{children}</p>,
+                              strong: ({children}) => <strong style={{color:"#e2e8f0",fontWeight:600}}>{children}</strong>,
+                              em: ({children}) => <em style={{color:"#a5b4fc"}}>{children}</em>,
+                              ul: ({children}) => <ul style={{paddingLeft:"18px",marginBottom:"8px",color:"#cbd5e1"}}>{children}</ul>,
+                              li: ({children}) => <li style={{marginBottom:"3px",lineHeight:"1.5"}}>{children}</li>,
+                              code: ({node, inline, children, ...props}) => inline
+                                ? <code style={{background:"rgba(255,255,255,0.1)",padding:"2px 5px",borderRadius:"4px",fontSize:"0.78rem",color:"#7dd3fc",fontFamily:"monospace"}} {...props}>{children}</code>
+                                : <pre style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"10px 14px",overflowX:"auto",marginBottom:"10px"}}><code style={{fontSize:"0.76rem",color:"#a5f3fc",fontFamily:"monospace",whiteSpace:"pre"}} {...props}>{children}</code></pre>,
+                              table: ({children}) => <div style={{overflowX:"auto",marginBottom:"10px"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.81rem"}}>{children}</table></div>,
+                              thead: ({children}) => <thead style={{background:"rgba(255,255,255,0.06)"}}>{children}</thead>,
+                              th: ({children}) => <th style={{padding:"5px 10px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid rgba(255,255,255,0.12)"}}>{children}</th>,
+                              td: ({children}) => <td style={{padding:"5px 10px",color:"#cbd5e1",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>{children}</td>,
                             }}
                           >
                             {msg.text}
