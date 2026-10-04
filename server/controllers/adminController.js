@@ -3,6 +3,15 @@ import Company from "../models/Company.js";
 import Invite from "../models/Invite.js";
 import Repository from "../models/Repository.js";
 import Room from "../models/Room.js";
+import RepositorySync from "../models/RepositorySync.js";
+import RepositoryChunk from "../models/RepositoryChunk.js";
+import PullRequest from "../models/PullRequest.js";
+import Drift from "../models/Drift.js";
+import CommitMemory from "../models/CommitMemory.js";
+import KnowledgeQA from "../models/KnowledgeQA.js";
+import GitHubConnection from "../models/GitHubConnection.js";
+import GitHubState from "../models/GitHubState.js";
+import { deleteCompanyChunks } from "../services/qdrantStore.js";
 
 // GET /api/admin/stats
 export const getAdminStats = async (req, res, next) => {
@@ -117,9 +126,25 @@ export const deleteCompany = async (req, res, next) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Cascade: deactivate employees, delete rooms, invites
+    // 1. Delete Qdrant vectors for company
+    try {
+      await deleteCompanyChunks(companyId.toString(), "repository_chunks");
+    } catch (qErr) {
+      // Log but continue
+    }
+
+    // 2. Cascade: delete all repositories, syncs, chunks, drifts, memories, QAs, connections, invites, rooms, users, company
     await Promise.all([
-      User.updateMany({ company: companyId }, { isActive: false }),
+      Repository.deleteMany({ $or: [{ companyId }, { company: companyId }] }),
+      RepositorySync.deleteMany({ companyId }),
+      RepositoryChunk.deleteMany({ companyId }),
+      PullRequest.deleteMany({ companyId }),
+      Drift.deleteMany({ companyId }),
+      CommitMemory.deleteMany({ companyId }),
+      KnowledgeQA.deleteMany({ companyId }),
+      GitHubConnection.deleteMany({ companyId }),
+      GitHubState.deleteMany({ companyId }),
+      User.deleteMany({ company: companyId }),
       Room.deleteMany({ company: companyId }),
       Invite.deleteMany({ company: companyId }),
       Company.findByIdAndDelete(companyId),
