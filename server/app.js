@@ -22,6 +22,7 @@ import companyDashboardRoutes from "./routes/companyDashboardRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import employeeDashboardRoutes from "./routes/employeeDashboardRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import seedAdmin from "./utils/seedAdmin.js";
 
@@ -35,7 +36,14 @@ connectDB().then(() => {
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL || "*", credentials: true }));
-app.use(express.json({ limit: "5mb" })); // larger limit for code/diff payloads
+app.use(
+  express.json({
+    limit: "50mb",
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // Health check endpoint for Uptime Robot / keeping server alive
 app.get("/api/health", (req, res) => {
@@ -57,6 +65,7 @@ app.use("/api/company", companyDashboardRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/employee", employeeDashboardRoutes);
 app.use("/api/team", teamRoutes);
+app.use("/api/reports", reportRoutes);
 
 // Serve static assets
 const clientDistPath = path.join(__dirname, "../client/dist");

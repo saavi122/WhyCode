@@ -13,7 +13,9 @@ import EmployeeAcceptInvite from "./pages/EmployeeAcceptInvite";
 import Dashboard from "./pages/Dashboard";
 import RecruiterOS from "./pages/RecruiterOS";
 import AuthCallback from "./components/AuthCallback";
-// CompanyLogin is now unified into Login.jsx (tabbed UI)
+import GitHubCallbackComplete from "./pages/GitHubCallbackComplete";
+
+import ReportsPage from "./pages/ReportsPage";
 
 import { ToastProvider } from "./context/ToastContext";
 
@@ -28,14 +30,18 @@ export default function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/company/login" element={<Login />} /> {/* unified tabbed login */}
+              <Route path="/company/login" element={<Login />} />
               <Route path="/company/signup" element={<Signup />} />
-              {/* Passwordless employee login */}
               <Route path="/employee/login" element={<EmployeeLogin />} />
-              {/* Accept email invite link */}
               <Route path="/invite/accept" element={<EmployeeAcceptInvite />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/github/callback-complete" element={<GitHubCallbackComplete />} />
               <Route path="/recruiter" element={<RecruiterOS />} />
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <ReportsPage />
+                </ProtectedRoute>
+              } />
               <Route path="/dashboard/*" element={
                 <ProtectedRoute>
                   <Dashboard />
@@ -48,4 +54,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
