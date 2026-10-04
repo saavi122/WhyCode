@@ -11,18 +11,23 @@ import { withRetry } from "../utils/retryHelper.js";
  */
 export function getQdrantUrl() {
   const url = process.env.QDRANT_URL || "http://127.0.0.1:6333";
+  if (url.startsWith("https://") || url.includes("qdrant.io")) {
+    return url.replace(/\/+$/, "");
+  }
   return url.replace("localhost", "127.0.0.1");
 }
 
 /**
  * Gets common HTTP headers for Qdrant API calls.
+ * Supports local instances and Qdrant Cloud API keys.
  * @returns {Object} Headers object.
  */
 function getHeaders() {
   const headers = { "Content-Type": "application/json" };
-  const serviceToken = process.env.INTERNAL_SERVICE_TOKEN;
-  if (serviceToken) {
-    headers["Authorization"] = `Bearer ${serviceToken}`;
+  const apiKey = process.env.QDRANT_API_KEY || process.env.INTERNAL_SERVICE_TOKEN;
+  if (apiKey) {
+    headers["api-key"] = apiKey;
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
   return headers;
 }
