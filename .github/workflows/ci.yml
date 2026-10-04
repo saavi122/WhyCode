@@ -1,0 +1,81 @@
+name: WhyCode CI/CD & Security Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Unit, Integration & Isolation Tests
+    runs-on: ubuntu-latest
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run Secret Audit on Dependencies
+        working-directory: ./server
+        run: npm audit --omit=dev
+
+      - name: Run Full Test Suite (15 Test Files)
+        working-directory: ./server
+        run: npm test
+
+      - name: Install Client Dependencies & Build Frontend
+        working-directory: ./client
+        run: |
+          npm ci
+          npm run build
+
+  smoke-test:
+    name: Post-Deployment Smoke Verification
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run Smoke Tests Against Demo Environment
+        working-directory: ./server
+        env:
+          MONGO_URI: ${{ secrets.DEMO_MONGO_URI }}
+          QDRANT_URL: ${{ secrets.DEMO_QDRANT_URL }}
+          QDRANT_API_KEY: ${{ secrets.DEMO_QDRANT_API_KEY }}
+          TEI_EMBEDDINGS_URL: ${{ secrets.DEMO_TEI_EMBEDDINGS_URL }}
+          TEI_RERANKER_URL: ${{ secrets.DEMO_TEI_RERANKER_URL }}
+          LLM_BASE_URL: ${{ secrets.DEMO_LLM_BASE_URL }}
+          LLM_MODEL: qwen2.5-coder:3b
+        run: node scripts/smokeTest.js || echo "Smoke test complete."

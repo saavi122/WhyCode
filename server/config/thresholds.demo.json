@@ -1,0 +1,39 @@
+{
+  "name": "WhyCode Calibrated Grounding Thresholds (Demo Stack)",
+  "calibratedAt": "2026-10-05T02:00:00.000Z",
+  "embeddingModel": "BAAI/bge-small-en-v1.5",
+  "embeddingDimension": 384,
+  "rerankerModel": "BAAI/bge-reranker-large",
+  "intentThresholds": {
+    "default": {
+      "minScoreThreshold": 0.05,
+      "minEvidenceChunks": 1,
+      "topK": 30,
+      "rerankTopN": 8
+    },
+    "architecture": {
+      "minScoreThreshold": 0.03,
+      "minEvidenceChunks": 1,
+      "topK": 30,
+      "rerankTopN": 10
+    },
+    "implementation": {
+      "minScoreThreshold": 0.05,
+      "minEvidenceChunks": 1,
+      "topK": 30,
+      "rerankTopN": 8
+    },
+    "commits": {
+      "minScoreThreshold": 0.01,
+      "minEvidenceChunks": 1,
+      "topK": 30,
+      "rerankTopN": 12
+    },
+    "unanswerable": {
+      "minScoreThreshold": 0.25,
+      "minEvidenceChunks": 1,
+      "topK": 30,
+      "rerankTopN": 5
+    }
+  }
+}

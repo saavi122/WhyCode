@@ -120,6 +120,13 @@ export const updateCompanyPlan = async (req, res, next) => {
 // DELETE /api/admin/companies/:companyId
 export const deleteCompany = async (req, res, next) => {
   try {
+    if (process.env.DEMO_MODE === "true" || process.env.DEMO_READ_ONLY === "true") {
+      return res.status(403).json({
+        message: "Demo Mode: Destructive organization deletion is disabled in read-only demo environment.",
+        code: "DEMO_READ_ONLY",
+      });
+    }
+
     const { companyId } = req.params;
     const company = await Company.findById(companyId);
     if (!company) {

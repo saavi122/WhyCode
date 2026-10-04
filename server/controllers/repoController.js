@@ -102,6 +102,13 @@ export const registerRepository = async (req, res, next) => {
 // DELETE /api/repositories/:repoId
 export const deleteRepository = async (req, res, next) => {
   try {
+    if (process.env.DEMO_MODE === "true" || process.env.DEMO_READ_ONLY === "true") {
+      return res.status(403).json({
+        message: "Demo Mode: Destructive repository deletion is disabled in read-only demo environment.",
+        code: "DEMO_READ_ONLY",
+      });
+    }
+
     const { repoId } = req.params;
     const companyId = req.user.company;
     const repo = await Repository.findOne({
