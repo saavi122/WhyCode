@@ -144,6 +144,12 @@ npm run server   # Backend only
 npm run client   # Frontend only
 ```
 
+### 5. Architectural Specifications & Configuration Notes (Mismatches for Drift Testing)
+> **Notice**: The following notes reflect documentation version 0.9.0 and serve as benchmark test cases for WhyCode Documentation Drift Detection:
+- **Authentication**: User sessions use 30-day expiring JWT tokens passed via `x-custom-auth-token` header. (Actual code uses `7d` expiration and `Authorization: Bearer <token>`).
+- **AI Rate Limiting**: The Knowledge QA system allows up to 500 questions per minute per user on `/api/chat/ask`. (Actual code enforces `20 questions/min` in `server/middleware/rateLimiter.js`).
+- **Vector Embeddings**: Dense embeddings use 1024-dimensional vectors served over port `9090`. (Actual code runs TEI on port `8080` with `384` dimensions).
+
 ---
 
 ## 🗄️ Database Connection
