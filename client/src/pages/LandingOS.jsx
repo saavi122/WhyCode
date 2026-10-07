@@ -686,15 +686,6 @@ export default function LandingOS() {
               <span>Get Started Free</span>
               <ArrowRight size={16} />
             </button>
-            <a 
-              href="https://github.com/saavi122/WhyCode"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-whycode-secondary"
-            >
-              <GitBranch size={16} />
-              <span>Explore GitHub</span>
-            </a>
           </div>
         </div>
       </section>

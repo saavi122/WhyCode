@@ -51,12 +51,6 @@ export default function App() {
                 <span>Waking up the server... Please wait a moment (cold start on free tier).</span>
               </div>
             )}
-            {isDemo && !wakingServer && (
-              <div className="bg-gradient-to-r from-indigo-900/90 via-purple-900/90 to-indigo-900/90 text-indigo-200 text-xs py-1 px-4 text-center font-medium border-b border-indigo-500/30 flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Demo: public repositories only</span>
-              </div>
-            )}
             <Routes>
               <Route path="/" element={<LandingOS />} />
               <Route path="/admin/login" element={<AdminLogin />} />
