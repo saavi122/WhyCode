@@ -12,7 +12,7 @@ import {
   Users, Building, Mail, Plus, Shield, Sliders, Play, Lock, Sparkles, Folder,
   GitFork, Layers, LogOut, RefreshCw, Key, Settings, Cpu, HardDrive, Menu, X,
   Clock, CheckCircle, AlertTriangle, BarChart3, ChevronRight, ChevronLeft, MessageSquare,
-  Search, Trash2, Send, CornerDownLeft, Eye, HelpCircle, Check, Ban, RotateCw
+  Search, Trash2, Send, CornerDownLeft, Eye, HelpCircle, Check, Ban, RotateCw, FileText, Database
 } from "lucide-react";
 import API from "../services/api";
 import ReactMarkdown from "react-markdown";

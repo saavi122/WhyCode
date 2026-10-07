@@ -7,7 +7,7 @@ import {
   Sliders, Users, Mail, GitFork, MessageSquare, Settings, CheckCircle, Clock,
   AlertTriangle, Folder, Search, Sparkles, Send, HelpCircle, Layers,
   Terminal, ShieldCheck, FileText, Share2, TrendingUp, BookOpen, AlertCircle, Check, LogOut,
-  Menu, X, ChevronLeft, ChevronRight, Trash2, Play, Calendar, Star, Flame
+  Menu, X, ChevronLeft, ChevronRight, Trash2, Play, Calendar, Star, Flame, Cpu
 } from "lucide-react";
 import API from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
