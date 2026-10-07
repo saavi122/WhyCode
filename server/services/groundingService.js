@@ -68,6 +68,15 @@ export function detectStructuredGitIntent(query = "") {
   if (!query || typeof query !== "string") return null;
   const q = String(query).trim();
 
+  // 0. Conversational greetings & hello
+  if (
+    /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|howdy|hola|yo)\b[!?.,]*$/i.test(q) ||
+    /^(how\s+are\s+you|who\s+are\s+you|what\s+can\s+you\s+do|what\s+is\s+whycode|help)\b[!?.,]*$/i.test(q) ||
+    /^(hi|hello|hey)\s+(there|whycode|companion|bot|ai|team)\b[!?.,]*$/i.test(q)
+  ) {
+    return { type: "GREETING", query: q };
+  }
+
   // 1. Contributor analytics / main contributors / top contributors / bus factor
   if (
     /\b(contributor\s+analytics|main\s+contributors?|top\s+contributors?|who\s+contributed(?:\s+the)?\s+most|who\s+wrote\s+the\s+most\s+code|who\s+committed(?:\s+the)?\s+most|commit\s+distribution|bus\s+factor|team\s+activity|contributor\s+stats|contributor\s+breakdown)\b/i.test(q) ||
@@ -159,6 +168,24 @@ export async function resolveStructuredGitAnswer(intent, repositoryId, repoDoc =
     }
 
     const repoName = toDisplayName(repoDoc?.name || repoDoc?.fullName, "the connected repository");
+
+    // 0. GREETING: Conversational hello without dumping repository evidence
+    if (intent.type === "GREETING") {
+      return {
+        type: "text",
+        status: "ok",
+        answer: `Hello! I'm your WhyCode AI Assistant for **${repoName}**.\n\nYou can ask me about:\n- Codebase architecture & key modules\n- Git history & why technical decisions were made\n- Contributor analytics & maintainer breakdown\n- Specific files, routes, or recent commits`,
+        citations: [],
+        sources: [],
+        grounded: true,
+        confidence: 1.0,
+        answeredBy: {
+          engine: "companion",
+          provider: "WhyCode Assistant",
+          model: "companion",
+        },
+      };
+    }
 
     // 1. CONTRIBUTOR ANALYTICS: Top contributors, commit distribution, and bus factor
     if (intent.type === "CONTRIBUTOR_ANALYTICS") {
