@@ -5,7 +5,10 @@ import CommitMemory from "../models/CommitMemory.js";
 import { fetchNeighbouringChunks, searchChunks } from "./qdrantStore.js";
 import { getEmbedding } from "./teiService.js";
 import { getChatCompletionsUrl, getVllmBaseUrl } from "./vllmService.js";
+import { getGeminiClient, isGeminiAvailable } from "./geminiService.js";
 import { validateTenantContext } from "./tenantGuard.js";
+import { assertLlmAllowed, isLlmAllowed } from "./privacyGuard.js";
+import { servicesConfig } from "../config/services.js";
 import { logInfo, logError } from "../utils/logger.js";
 
 const SEVERITY_ORDER = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
@@ -83,6 +86,9 @@ export function postCheckCommitShas(candidateShas = [], retrievedShas = []) {
 export async function generateDriftReport({ authContext, repositoryId, targetPath, triggerType = "MANUAL" }) {
   const { companyId } = validateTenantContext(authContext, repositoryId);
 
+  const repo = await Repository.findById(repositoryId);
+  assertLlmAllowed(repo, servicesConfig);
+
   try {
     // 1. Retrieve chunks for targetPath
     const chunks = await fetchNeighbouringChunks(authContext, repositoryId, "repository_chunks", [targetPath]);
@@ -150,12 +156,49 @@ Respond in strict JSON format:
       );
 
       const raw = response.data?.choices?.[0]?.message?.content || "";
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch {
+            // fallback structure
+            parsed = {
+              driftDetected: true,
+              severity: "MEDIUM",
+              confidence: 0.85,
+              summary: "Documentation mismatch detected in " + targetPath,
+              driftDetails: raw.slice(0, 300),
+            };
+          }
+        }
       }
     } catch (llmErr) {
-      logError("[REPORT] LLM Drift generation failed", { errorMessage: llmErr.message, targetPath });
+      logError("[REPORT] Primary LLM Drift generation failed - attempting Gemini fallback", { errorMessage: llmErr.message, targetPath });
+      if (isGeminiAvailable() && isLlmAllowed(repo, { ...servicesConfig, llmExternal: true })) {
+        try {
+          const ai = getGeminiClient();
+          const geminiRes = await ai.models.generateContent({
+            model: servicesConfig.geminiModel || "gemini-2.5-flash",
+            contents: `You are WhyCode Documentation Drift Analyzer.\n\n${prompt}`,
+            config: { temperature: 0.0, responseMimeType: "application/json" },
+          });
+          const raw = geminiRes.text || "";
+          const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+          try {
+            parsed = JSON.parse(cleaned);
+          } catch (_) {
+            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+          }
+          logInfo("[REPORT] Drift report generated using Gemini fallback", { targetPath });
+        } catch (geminiErr) {
+          logError("[REPORT] Gemini Drift fallback failed", { errorMessage: geminiErr.message });
+        }
+      }
     }
 
     if (!parsed) {
@@ -192,12 +235,12 @@ Respond in strict JSON format:
         lineRanges,
       },
       output: {
-        title: `Documentation Drift: ${targetPath}`,
-        summary: parsed.summary || (merged.driftDetected ? "Documentation drift detected." : "Documentation is up to date."),
-        driftDetected: merged.driftDetected,
-        driftDetails: parsed.driftDetails || "",
-        suggestedDoc: parsed.suggestedDoc || "",
-        citations: Array.isArray(parsed.citations) ? parsed.citations : chunkIds,
+        title: String(parsed.title || `Documentation Drift: ${targetPath}`),
+        summary: Array.isArray(parsed.summary) ? parsed.summary.join("\n") : String(parsed.summary || (merged.driftDetected ? "Documentation drift detected." : "Documentation is up to date.")),
+        driftDetected: Boolean(merged.driftDetected),
+        driftDetails: Array.isArray(parsed.driftDetails) ? parsed.driftDetails.join("\n") : String(parsed.driftDetails || ""),
+        suggestedDoc: Array.isArray(parsed.suggestedDoc) ? parsed.suggestedDoc.join("\n") : String(parsed.suggestedDoc || ""),
+        citations: Array.isArray(parsed.citations) ? parsed.citations.map(String) : chunkIds,
       },
       model: process.env.LLM_MODEL || "qwen2.5-coder:3b",
       promptVersion: "v1.0.0",
@@ -225,6 +268,9 @@ Respond in strict JSON format:
  */
 export async function generateIntentReport({ authContext, repositoryId, targetPath, targetSymbol = null, triggerType = "MANUAL" }) {
   const { companyId } = validateTenantContext(authContext, repositoryId);
+
+  const repo = await Repository.findById(repositoryId);
+  assertLlmAllowed(repo, servicesConfig);
 
   try {
     // 1. Retrieve chunks and commit memories for target
@@ -303,7 +349,23 @@ Respond in strict JSON format:
         parsed = JSON.parse(jsonMatch[0]);
       }
     } catch (llmErr) {
-      logError("[REPORT] LLM Intent generation failed", { errorMessage: llmErr.message, targetPath });
+      logError("[REPORT] Primary LLM Intent generation failed - attempting Gemini fallback", { errorMessage: llmErr.message, targetPath });
+      if (isGeminiAvailable() && isLlmAllowed(repo, { ...servicesConfig, llmExternal: true })) {
+        try {
+          const ai = getGeminiClient();
+          const geminiRes = await ai.models.generateContent({
+            model: servicesConfig.geminiModel || "gemini-2.5-flash",
+            contents: `You are WhyCode Intent Reconstruction Engine.\n\n${prompt}`,
+            config: { temperature: 0.0, responseMimeType: "application/json" },
+          });
+          const raw = geminiRes.text || "";
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+          logInfo("[REPORT] Intent report generated using Gemini fallback", { targetPath });
+        } catch (geminiErr) {
+          logError("[REPORT] Gemini Intent fallback failed", { errorMessage: geminiErr.message });
+        }
+      }
     }
 
     if (!parsed) {
@@ -340,9 +402,9 @@ Respond in strict JSON format:
         lineRanges: chunks.map((c) => ({ start: c.payload?.startLine || 1, end: c.payload?.endLine || 1 })),
       },
       output: {
-        title: parsed.title || `Intent Analysis: ${targetPath}`,
-        summary: parsed.summary || "",
-        intentDescription: parsed.intentDescription || parsed.summary || "",
+        title: String(parsed.title || `Intent Analysis: ${targetPath}`),
+        summary: Array.isArray(parsed.summary) ? parsed.summary.join("\n") : String(parsed.summary || ""),
+        intentDescription: Array.isArray(parsed.intentDescription) ? parsed.intentDescription.join("\n") : String(parsed.intentDescription || parsed.summary || ""),
         evidenceCommits: verifiedEvidenceCommits,
         citations: chunkIds,
       },
@@ -373,6 +435,9 @@ Respond in strict JSON format:
  */
 export async function generateChangeSummaryReport({ authContext, repositoryId, targetPath = "*", triggerType = "MANUAL" }) {
   const { companyId } = validateTenantContext(authContext, repositoryId);
+
+  const repo = await Repository.findById(repositoryId);
+  assertLlmAllowed(repo, servicesConfig);
 
   try {
     const recentMemories = await CommitMemory.find({

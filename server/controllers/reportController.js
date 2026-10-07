@@ -10,6 +10,7 @@ import {
   rejectReport,
   exportReportMarkdown,
 } from "../services/reportService.js";
+import { assertExternalLlmAllowed } from "../middleware/demoGuard.js";
 import { logInfo, logError } from "../utils/logger.js";
 
 /**
@@ -98,6 +99,10 @@ export const triggerGenerateReport = async (req, res, next) => {
     const repo = await Repository.findOne({ _id: repositoryId, companyId });
     if (!repo) {
       return res.status(404).json({ message: "Repository not found or unauthorized for this workspace." });
+    }
+
+    if (!assertExternalLlmAllowed(repo, res)) {
+      return;
     }
 
     const authContext = { companyId, user: req.user };
@@ -226,6 +231,11 @@ export const handleRetryReport = async (req, res, next) => {
     const report = await Report.findOne({ _id: id, companyId });
     if (!report) {
       return res.status(404).json({ message: "Report not found." });
+    }
+
+    const repo = await Repository.findById(report.repositoryId);
+    if (!assertExternalLlmAllowed(repo, res)) {
+      return;
     }
 
     const authContext = { companyId, user: req.user };

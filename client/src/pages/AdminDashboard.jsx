@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -520,19 +521,20 @@ export default function AdminDashboard() {
       />
 
       {/* ── COMPANY DETAIL MODAL ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {detailCompanyId && (
-          <>
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDetailCompanyId(null)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100]"
-            />
-            <motion.div
-              key="modal"
+      {createPortal(
+        <AnimatePresence>
+          {detailCompanyId && (
+            <>
+              <motion.div
+                key="backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDetailCompanyId(null)}
+                className="fixed inset-0 bg-black/80 backdrop-blur-md z-[99998]"
+              />
+              <motion.div
+                key="modal"
               initial={{ opacity: 0, scale: 0.96, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 20 }}
@@ -749,7 +751,9 @@ export default function AdminDashboard() {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
     </div>
   );
 }

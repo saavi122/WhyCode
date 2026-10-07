@@ -1,9 +1,12 @@
 import KnowledgeQA from "../models/KnowledgeQA.js";
 import Repository from "../models/Repository.js";
 import mongoose from "mongoose";
+import { servicesConfig } from "../config/services.js";
+import { assertExternalLlmAllowed } from "../middleware/demoGuard.js";
 import { queryRepositoryKnowledge } from "../services/groundingService.js";
 import { getCachedDemoAnswer } from "../services/demoCacheService.js";
 import { validateTenantContext } from "../services/tenantGuard.js";
+import { countPoints } from "../services/qdrantStore.js";
 import { logInfo, logError } from "../utils/logger.js";
 
 /**
@@ -41,10 +44,13 @@ export const askQuestion = async (req, res, next) => {
     repo = await Repository.findOne({ _id: repoId, ...tenantFilter });
   }
   if (!repo) {
-    repo = await Repository.findOne({
-      $or: [{ fullName: repoId }, { name: repoId }, { repoName: repoId }],
-      ...tenantFilter,
-    });
+    repo = await Repository.findOne({ fullName: repoId, ...tenantFilter });
+  }
+  if (!repo) {
+    repo = await Repository.findOne({ name: repoId, ...tenantFilter });
+  }
+  if (!repo) {
+    repo = await Repository.findOne({ repoName: repoId, ...tenantFilter });
   }
 
   if (!repo) {
@@ -57,6 +63,15 @@ export const askQuestion = async (req, res, next) => {
   logInfo("[CHAT] repository resolved", { repositoryId: resolvedRepoId, fullName: repo.fullName });
   console.log("[CHAT] repository resolved");
 
+  // Privacy Policy: when LLM_EXTERNAL=true refuse to answer for private repositories or repos not in allowlist
+  if (!assertExternalLlmAllowed(repo, res)) {
+    logInfo("[PRIVACY] External LLM refusal triggered for repository", {
+      repoId: repo._id,
+      fullName: repo.fullName,
+    });
+    return;
+  }
+
   try {
     // Auth session context (req.user carries company / companyId)
     validateTenantContext(req.user, resolvedRepoId);
@@ -65,10 +80,10 @@ export const askQuestion = async (req, res, next) => {
     let result = null;
 
     // Check demo cache if DEMO_MODE or as instant suggested answer
-    if (process.env.DEMO_MODE === "true" || process.env.ENABLE_DEMO_CACHE === "true") {
+    if (servicesConfig.demoMode || process.env.ENABLE_DEMO_CACHE === "true") {
       const cached = getCachedDemoAnswer(question);
       if (cached) {
-        result = cached;
+        result = { ...cached, cached: true };
       }
     }
 
@@ -106,16 +121,18 @@ export const askQuestion = async (req, res, next) => {
       companyId: errorCompanyId,
     });
 
-    // If answer model is unreachable or timed out, return friendly 503 without hallucinating
+    // If answer model, TEI, or Qdrant is unreachable or timed out, return friendly 503 without hallucinating
     if (
       err.message?.includes("Answer model is not running") ||
       err.message?.includes("timeout") ||
+      err.message?.includes("unreachable") ||
       err.code === "ECONNREFUSED" ||
-      err.code === "CIRCUIT_BREAKER_OPEN"
+      err.code === "CIRCUIT_BREAKER_OPEN" ||
+      err.code === "LLM_UNREACHABLE"
     ) {
       return res.status(503).json({
-        message: "Answer model is temporarily unavailable in demo mode. Please try suggested questions or retry shortly.",
-        code: "ANSWER_MODEL_UNAVAILABLE",
+        message: "Inference or search service is temporarily unavailable. Please try again shortly.",
+        code: "SERVICE_UNAVAILABLE",
         grounded: false,
       });
     }

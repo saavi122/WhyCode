@@ -107,26 +107,52 @@ export const sendInvite = async (req, res, next) => {
 export const verifyInvite = async (req, res, next) => {
   try {
     const { token } = req.params;
-    const invite = await Invite.findOne({ token }).populate("company");
+    const invite = await Invite.findOne({ token }).populate("company").populate("invitedBy", "name email");
 
     if (!invite) {
-      return res.status(404).json({ message: "Invalid invite link" });
+      return res.status(404).json({
+        valid: false,
+        reason: "invalid",
+        message: "This invitation link is invalid or corrupted."
+      });
     }
 
-    if (invite.status !== "pending") {
-      return res.status(400).json({ message: "Invite already used or expired" });
+    if (invite.status === "accepted") {
+      return res.status(400).json({
+        valid: false,
+        reason: "accepted",
+        message: "This invitation has already been accepted. You can log into your workspace console."
+      });
     }
 
-    if (invite.expiresAt < new Date()) {
-      invite.status = "expired";
-      await invite.save();
-      return res.status(400).json({ message: "Invite link has expired" });
+    if (invite.status === "revoked") {
+      return res.status(400).json({
+        valid: false,
+        reason: "revoked",
+        message: "This invitation has been revoked by your workspace administrator."
+      });
+    }
+
+    if (invite.status === "expired" || invite.expiresAt < new Date()) {
+      if (invite.status !== "expired") {
+        invite.status = "expired";
+        await invite.save();
+      }
+      return res.status(400).json({
+        valid: false,
+        reason: "expired",
+        message: "This invitation link has expired (invitations are valid for 48 hours)."
+      });
     }
 
     res.json({
       valid: true,
       email: invite.email,
-      companyName: invite.company.name,
+      name: invite.name || "",
+      companyName: invite.company?.name || "WhyCode Workspace",
+      role: "Backend Engineer",
+      invitedBy: invite.invitedBy?.name || invite.company?.name || "Company Admin",
+      assignedRepo: invite.assignedRepo || null,
     });
   } catch (err) {
     next(err);
@@ -139,33 +165,35 @@ export const acceptInvite = async (req, res, next) => {
     const { token, name, password } = req.body;
 
     if (!token || !name || !password) {
-      return res.status(400).json({ message: "Token, name and password are required" });
+      return res.status(400).json({ message: "Token, name, and password are required" });
     }
 
     const invite = await Invite.findOne({ token }).populate("company");
     if (!invite) {
-      return res.status(404).json({ message: "Invalid invite link" });
+      return res.status(404).json({ valid: false, reason: "invalid", message: "This invitation link is invalid or corrupted." });
     }
 
-    if (invite.status !== "pending") {
-      return res.status(400).json({ message: "Invite already used or expired" });
+    if (invite.status === "accepted") {
+      return res.status(400).json({ valid: false, reason: "accepted", message: "This invitation has already been accepted." });
     }
 
-    if (invite.expiresAt < new Date()) {
+    if (invite.status === "revoked") {
+      return res.status(400).json({ valid: false, reason: "revoked", message: "This invitation has been revoked." });
+    }
+
+    if (invite.status === "expired" || invite.expiresAt < new Date()) {
       invite.status = "expired";
       await invite.save();
-      return res.status(400).json({ message: "Invite link has expired" });
+      return res.status(400).json({ valid: false, reason: "expired", message: "This invitation link has expired." });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: invite.email.toLowerCase() }).select("+password");
     if (existingUser) {
-      // Already registered — just mark invite accepted and log them in
       if (existingUser.role !== "employee" || existingUser.company?.toString() !== invite.company._id.toString()) {
-        return res.status(400).json({ message: "Email already registered with a different account" });
+        return res.status(400).json({ message: "Email already registered under another account." });
       }
 
-      // If user has a password, verify it. Otherwise, set it now.
       if (existingUser.password) {
         const isMatch = await bcrypt.compare(password, existingUser.password);
         if (!isMatch) {
@@ -174,6 +202,7 @@ export const acceptInvite = async (req, res, next) => {
       } else {
         const hashedPassword = await bcrypt.hash(password, 12);
         existingUser.password = hashedPassword;
+        if (name) existingUser.name = name;
         await existingUser.save();
       }
 
@@ -195,7 +224,7 @@ export const acceptInvite = async (req, res, next) => {
 
     // Create User with password
     const user = await User.create({
-      name,
+      name: name.trim(),
       email: invite.email.toLowerCase(),
       role: "employee",
       company: invite.company._id,
@@ -216,7 +245,6 @@ export const acceptInvite = async (req, res, next) => {
           await room.save();
         }
       } else {
-        // Create a new Room for this repository
         const repoNameOnly = invite.assignedRepo.split("/")[1] || invite.assignedRepo;
         await Room.create({
           name: `${repoNameOnly.charAt(0).toUpperCase() + repoNameOnly.slice(1)} Workspace`,

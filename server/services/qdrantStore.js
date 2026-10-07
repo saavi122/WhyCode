@@ -1,20 +1,40 @@
 import axios from "axios";
 import http from "http";
 import { validateTenantContext } from "./tenantGuard.js";
+import { servicesConfig } from "../config/services.js";
 import { logInfo, logError } from "../utils/logger.js";
 import { withRetry } from "../utils/retryHelper.js";
 
+import { isLocalOrPrivateAddress } from "../config/services.js";
+
 /**
- * Gets the configured Qdrant URL from environment variables.
- * Defaults to 127.0.0.1:6333 to prevent IPv6/IPv4 localhost resolution issues.
+ * Ensures write operations do not accidentally target remote production clusters during tests or scripts.
+ * Allows writes if:
+ * 1. Target URL is localhost / private IP
+ * 2. Collection name contains 'test'
+ * 3. ALLOW_REAL_QDRANT_WRITES=true is explicitly set
+ *
+ * @param {string} collectionName Qdrant collection name
+ */
+export function assertQdrantWriteAllowed(collectionName) {
+  const url = getQdrantUrl();
+  const isLocal = isLocalOrPrivateAddress(url);
+  const isTestCollection = (collectionName || "").toLowerCase().includes("test");
+  const isExplicitlyAllowed = process.env.ALLOW_REAL_QDRANT_WRITES === "true";
+
+  if (!isLocal && !isTestCollection && !isExplicitlyAllowed) {
+    throw new Error(
+      "Safety Error: Remote Qdrant write rejected because destination is not localhost or a test collection. Set ALLOW_REAL_QDRANT_WRITES=true to override."
+    );
+  }
+}
+
+/**
+ * Gets the configured Qdrant URL from centralized servicesConfig.
  * @returns {string} Qdrant base URL.
  */
 export function getQdrantUrl() {
-  const url = process.env.QDRANT_URL || "http://127.0.0.1:6333";
-  if (url.startsWith("https://") || url.includes("qdrant.io")) {
-    return url.replace(/\/+$/, "");
-  }
-  return url.replace("localhost", "127.0.0.1");
+  return servicesConfig.qdrantUrl;
 }
 
 /**
@@ -24,7 +44,7 @@ export function getQdrantUrl() {
  */
 function getHeaders() {
   const headers = { "Content-Type": "application/json" };
-  const apiKey = process.env.QDRANT_API_KEY || process.env.INTERNAL_SERVICE_TOKEN;
+  const apiKey = servicesConfig.qdrantApiKey;
   if (apiKey) {
     headers["api-key"] = apiKey;
     headers["Authorization"] = `Bearer ${apiKey}`;
@@ -73,6 +93,7 @@ function createFreshClient() {
  */
 export async function upsertChunks(authContext, repositoryId, collectionName, points) {
   const { companyId } = validateTenantContext(authContext, repositoryId);
+  assertQdrantWriteAllowed(collectionName);
 
   if (!Array.isArray(points) || points.length === 0) {
     return { status: "ok", updated: 0 };
@@ -260,6 +281,7 @@ export async function fetchNeighbouringChunks(authContext, repositoryId, collect
  */
 export async function deleteRepositoryChunks(authContext, repositoryId, collectionName) {
   const { companyId } = validateTenantContext(authContext, repositoryId);
+  assertQdrantWriteAllowed(collectionName);
 
   const filter = buildTenantFilter(companyId, repositoryId);
   const startTime = Date.now();
@@ -304,6 +326,7 @@ export async function deleteRepositoryChunks(authContext, repositoryId, collecti
 export async function deleteFileChunks(authContext, repositoryId, collectionName, filePaths = []) {
   if (!Array.isArray(filePaths) || filePaths.length === 0) return { status: "ok" };
   const { companyId } = validateTenantContext(authContext, repositoryId);
+  assertQdrantWriteAllowed(collectionName);
   const cleanPaths = Array.from(new Set(filePaths.filter(Boolean)));
   if (cleanPaths.length === 0) return { status: "ok" };
 
@@ -355,6 +378,7 @@ export async function deleteFileChunks(authContext, repositoryId, collectionName
  * @returns {Promise<Object>} Deletion result.
  */
 export async function deleteCompanyChunks(companyId, collectionName = "repository_chunks") {
+  assertQdrantWriteAllowed(collectionName);
   if (!companyId) return { status: "ok" };
   const filter = {
     must: [{ key: "companyId", match: { value: String(companyId) } }],

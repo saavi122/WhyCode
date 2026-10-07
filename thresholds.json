@@ -1,0 +1,44 @@
+{
+  "RERANK_MIN_SCORE": 0.05,
+  "MIN_EVIDENCE_CHUNKS": 1,
+  "MAX_CANDIDATES": 30,
+  "RERANK_LIMIT": 8,
+  "MAX_CONTEXT_TOKENS": 3000,
+  "calibratedAt": "2026-10-04T19:04:58.105Z",
+  "metrics": {
+    "abstentionAccuracy": 0.8,
+    "falseRefusalRate": 0.06666666666666667,
+    "overallAccuracy": 0.9,
+    "optimalScoreThreshold": 0.05,
+    "optimalMinEvidenceChunks": 1
+  },
+  "quotas": {
+    "how_why": {
+      "code": 5,
+      "doc": 2,
+      "commit": 1,
+      "pr": 1
+    },
+    "what_changed": {
+      "commit": 5,
+      "pr": 2,
+      "code": 1
+    },
+    "who_wrote": {
+      "commit": 5,
+      "pr": 2,
+      "code": 1
+    },
+    "architecture": {
+      "doc": 4,
+      "code": 3,
+      "commit": 1
+    },
+    "default": {
+      "code": 5,
+      "doc": 2,
+      "commit": 1,
+      "pr": 1
+    }
+  }
+}

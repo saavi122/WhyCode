@@ -64,15 +64,181 @@ describe("GroundingService", () => {
       minScoreThreshold: 0.5,
     });
 
-    expect(result.answer).toBe(INSUFFICIENT_EVIDENCE_MESSAGE);
+    expect(result.answer).toBe("I couldn't find sufficient evidence in the connected repository");
     expect(result.citations).toEqual([]);
+    expect(result.sources).toEqual([]);
     expect(result.grounded).toBe(false);
 
     // CRITICAL GROUNDING REQUIREMENT: vLLM MUST NOT BE CALLED
     expect(vllmService.generateGroundedAnswer).not.toHaveBeenCalled();
   });
 
-  it("should execute grounded generation and map citations when evidence threshold passes", async () => {
+  it("should return server-built citations in direct evidence mode without calling LLM", async () => {
+    const session = { companyId: "comp-1" };
+    const mockChunks = [
+      {
+        id: "chunk-1",
+        score: 0.88,
+        payload: {
+          chunkId: "chunk-1",
+          filePath: "src/auth/jwt.js",
+          startLine: 10,
+          endLine: 40,
+          commitSha: "1111222233334444555566667777888899990000",
+          prNumber: 42,
+          url: "https://github.com/repo/blob/1111222233334444555566667777888899990000/src/auth/jwt.js#L10-L40",
+          documentType: "CODE",
+          text: "function verifyJwtToken() { return true; }",
+        },
+      },
+    ];
+
+    teiService.getEmbedding.mockResolvedValueOnce([0.1, 0.2]);
+    qdrantStore.searchChunks.mockResolvedValueOnce(mockChunks);
+    teiService.rerank.mockResolvedValueOnce(mockChunks);
+
+    const result = await queryRepositoryKnowledge(session, "repo-1", "How does auth work?", {
+      answerMode: "evidence",
+      minScoreThreshold: 0.5,
+    });
+
+    expect(result.grounded).toBe(true);
+    expect(result.answer).toBe("");
+    expect(result.answerMode).toBe("evidence");
+    expect(result.banner).toBe("Answer model is offline: showing the most relevant repository evidence");
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0]).toMatchObject({
+      file: "src/auth/jwt.js",
+      filePath: "src/auth/jwt.js",
+      lineRange: [10, 40],
+      commitSha: "1111222233334444555566667777888899990000",
+      prNumber: 42,
+      permalink: "https://github.com/repo/blob/1111222233334444555566667777888899990000/src/auth/jwt.js#L10-L40",
+      label: "src/auth/jwt.js#L10-L40",
+    });
+    expect(vllmService.generateGroundedAnswer).not.toHaveBeenCalled();
+  });
+
+  it("should automatically fall back to evidence mode when LLM throws 429", async () => {
+    const session = { companyId: "comp-1" };
+    const mockChunks = [
+      {
+        id: "chunk-rate-limit",
+        score: 0.85,
+        payload: {
+          chunkId: "c-rl",
+          path: "client/src/App.jsx",
+          startLine: 1,
+          endLine: 20,
+          commitSha: "aabbccddeeff00112233445566778899aabbccdd",
+          url: "https://github.com/repo/blob/aabbccddeeff00112233445566778899aabbccdd/client/src/App.jsx#L1-L20",
+          text: "export default function App() {}",
+        },
+      },
+    ];
+
+    teiService.getEmbedding.mockResolvedValueOnce([0.1, 0.2]);
+    qdrantStore.searchChunks.mockResolvedValueOnce(mockChunks);
+    teiService.rerank.mockResolvedValueOnce(mockChunks);
+
+    const err429 = new Error("Rate limit exceeded");
+    err429.code = "HTTP_429";
+    err429.status = 429;
+    vllmService.generateGroundedAnswer.mockRejectedValueOnce(err429);
+
+    const result = await queryRepositoryKnowledge(session, "repo-1", "Explain App.jsx", {
+      answerMode: "generate",
+      minScoreThreshold: 0.5,
+    });
+
+    expect(result.grounded).toBe(true);
+    expect(result.answer).toBe("");
+    expect(result.answerMode).toBe("evidence");
+    expect(result.banner).toBe("Answer model is offline: showing the most relevant repository evidence");
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].file).toBe("client/src/App.jsx");
+    expect(result.citations[0].commitSha).toBe("aabbccddeeff00112233445566778899aabbccdd");
+  });
+
+  it("should automatically fall back to evidence mode when LLM times out", async () => {
+    const session = { companyId: "comp-1" };
+    const mockChunks = [
+      {
+        id: "chunk-timeout",
+        score: 0.90,
+        payload: {
+          chunkId: "c-to",
+          filePath: "server/routes/api.js",
+          startLine: 15,
+          endLine: 50,
+          commitSha: "99887766554433221100aabbccddeeff00112233",
+          url: "https://github.com/repo/blob/99887766554433221100aabbccddeeff00112233/server/routes/api.js#L15-L50",
+          text: "router.get('/health', ...)",
+        },
+      },
+    ];
+
+    teiService.getEmbedding.mockResolvedValueOnce([0.1, 0.2]);
+    qdrantStore.searchChunks.mockResolvedValueOnce(mockChunks);
+    teiService.rerank.mockResolvedValueOnce(mockChunks);
+
+    const timeoutErr = new Error("timeout of 30000ms exceeded");
+    timeoutErr.code = "ECONNABORTED";
+    vllmService.generateGroundedAnswer.mockRejectedValueOnce(timeoutErr);
+
+    const result = await queryRepositoryKnowledge(session, "repo-1", "What are the routes?", {
+      answerMode: "generate",
+      minScoreThreshold: 0.5,
+    });
+
+    expect(result.grounded).toBe(true);
+    expect(result.answer).toBe("");
+    expect(result.answerMode).toBe("evidence");
+    expect(result.banner).toBe("Answer model is offline: showing the most relevant repository evidence");
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].file).toBe("server/routes/api.js");
+  });
+
+  it("should automatically fall back to evidence mode when circuit breaker is OPEN", async () => {
+    const session = { companyId: "comp-1" };
+    const mockChunks = [
+      {
+        id: "chunk-cb",
+        score: 0.92,
+        payload: {
+          chunkId: "c-cb",
+          filePath: "services/circuit.js",
+          startLine: 5,
+          endLine: 30,
+          commitSha: "1234567890abcdef1234567890abcdef12345678",
+          url: "https://github.com/repo/blob/1234567890abcdef1234567890abcdef12345678/services/circuit.js#L5-L30",
+          text: "class CircuitBreaker {}",
+        },
+      },
+    ];
+
+    teiService.getEmbedding.mockResolvedValueOnce([0.1, 0.2]);
+    qdrantStore.searchChunks.mockResolvedValueOnce(mockChunks);
+    teiService.rerank.mockResolvedValueOnce(mockChunks);
+
+    const cbErr = new Error("Answer model is not running");
+    cbErr.code = "CIRCUIT_BREAKER_OPEN";
+    vllmService.generateGroundedAnswer.mockRejectedValueOnce(cbErr);
+
+    const result = await queryRepositoryKnowledge(session, "repo-1", "How does circuit breaker work?", {
+      answerMode: "generate",
+      minScoreThreshold: 0.5,
+    });
+
+    expect(result.grounded).toBe(true);
+    expect(result.answer).toBe("");
+    expect(result.answerMode).toBe("evidence");
+    expect(result.banner).toBe("Answer model is offline: showing the most relevant repository evidence");
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].file).toBe("services/circuit.js");
+  });
+
+  it("should execute grounded generation and map citations when evidence threshold passes in generate mode", async () => {
     const session = { companyId: "comp-1" };
     const mockChunks = [
       {
@@ -99,6 +265,7 @@ describe("GroundingService", () => {
     });
 
     const result = await queryRepositoryKnowledge(session, "repo-1", "How does auth work?", {
+      answerMode: "generate",
       minScoreThreshold: 0.5,
     });
 

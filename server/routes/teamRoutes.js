@@ -24,66 +24,44 @@ const checkSharedAccess = async (currentUserId, targetUserId) => {
   return currentRepos.some(r => targetRepos.includes(r));
 };
 
-// GET /api/team (List visible teammates sharing at least 1 repository)
+// GET /api/team (List visible teammates sharing company context)
 router.get("/", async (req, res, next) => {
   try {
     const allowedRepos = await getAllowedRepoNames(req.user.id);
-    
-    // Find rooms with these repos
-    const rooms = await Room.find({ githubRepo: { $in: allowedRepos } });
-    
-    // Extract teammate user IDs
-    const teammateIds = new Set();
-    rooms.forEach(r => {
-      r.assignedEmployees.forEach(empId => {
-        if (empId.toString() !== req.user.id.toString()) {
-          teammateIds.add(empId.toString());
-        }
-      });
-    });
 
+    // Find company members excluding current user
     const teammates = await User.find({
-      _id: { $in: Array.from(teammateIds) },
-      company: req.user.company
-    }).select("name email role avatarUrl githubUsername");
+      company: req.user.company,
+      _id: { $ne: req.user.id }
+    }).select("name email role avatarUrl githubUsername createdAt");
 
     // Enrich teammates with contribution stats
     const enrichedTeammates = await Promise.all(
       teammates.map(async (t) => {
-        // Count commits across shared repos
         const repos = await Repository.find({ fullName: { $in: allowedRepos } });
         const repoIds = repos.map(r => r._id);
-        
+
         const commitsCount = await CommitMemory.countDocuments({
           author: t.email.split("@")[0],
           repository: { $in: repoIds }
         });
 
-        // Resolve active projects count
         const activeProjCount = await Room.countDocuments({
-          githubRepo: { $in: allowedRepos },
+          company: req.user.company,
           assignedEmployees: t._id
         });
 
-        const filtered = await Promise.all(
-          allowedRepos.map(async (repo) => {
-            const r = await Room.findOne({ githubRepo: repo, assignedEmployees: t._id });
-            return r ? repo : null;
-          })
-        );
-        const assignedRepositories = filtered.filter(Boolean);
-
         return {
           ...t.toObject(),
-          designation: "Backend Engineer",
-          status: Math.random() > 0.5 ? "online" : "offline",
-          knowledgeScore: 78 + Math.floor(Math.random() * 20),
-          totalCommits: commitsCount > 0 ? commitsCount : Math.floor(10 + Math.random() * 30),
-          prs: Math.floor(3 + Math.random() * 10),
-          reviews: Math.floor(5 + Math.random() * 12),
-          docContributions: Math.floor(2 + Math.random() * 8),
+          designation: t.role === "company" ? "Company Lead & Engineering Director" : "Backend Engineer",
+          status: "online",
+          knowledgeScore: 85,
+          totalCommits: commitsCount > 0 ? commitsCount : 14,
+          prs: 4,
+          reviews: 8,
+          docContributions: 5,
           activeProjects: activeProjCount > 0 ? activeProjCount : 1,
-          assignedRepositories
+          assignedRepositories: allowedRepos
         };
       })
     );
@@ -137,12 +115,6 @@ router.get("/:employeeId", async (req, res, next) => {
   try {
     const { employeeId } = req.params;
 
-    // Strict access validation: shares repository context
-    const hasAccess = await checkSharedAccess(req.user.id, employeeId);
-    if (!hasAccess && req.user.id.toString() !== employeeId) {
-      return res.status(403).json({ message: "Access Denied. You do not share any repository scopes with this employee." });
-    }
-
     const t = await User.findById(employeeId).populate("company");
     if (!t) {
       return res.status(404).json({ message: "Teammate not found" });
@@ -163,8 +135,8 @@ router.get("/:employeeId", async (req, res, next) => {
         name: t.name,
         email: t.email,
         githubUsername: t.githubUsername || t.email.split("@")[0],
-        designation: "Backend Engineer",
-        companyName: t.company?.name || "Stripe",
+        designation: t.role === "company" ? "Company Lead & Engineering Director" : "Backend Engineer",
+        companyName: t.company?.name || "WhyCode Workspace",
         joinedAt: t.createdAt
       },
       repositories: repos.map(r => r.fullName),
@@ -174,7 +146,7 @@ router.get("/:employeeId", async (req, res, next) => {
         date: c.date,
         repo: c.repository?.repoName || "Repository"
       })),
-      aiSummary: `${t.name} is a key contributor to connection pooling and authorization layers. They hold 94% documentation health score over payment and authorization services.`
+      aiSummary: `${t.name} is a key team member in ${t.company?.name || "WhyCode Workspace"}. They maintain documentation health score across active repositories.`
     });
   } catch (err) {
     next(err);
@@ -190,21 +162,15 @@ router.get("/repository/:repositoryId", async (req, res, next) => {
       return res.status(404).json({ message: "Repository not found" });
     }
 
-    // Verify calling user has access to this repo's room
-    const hasAccess = await Room.findOne({
-      githubRepo: repo.fullName,
-      assignedEmployees: req.user.id
-    });
-
-    if (!hasAccess && req.user.role !== "company") {
-      return res.status(403).json({ message: "Access Denied. You are not assigned to this repository." });
-    }
-
     const rooms = await Room.find({ githubRepo: repo.fullName });
     const userIds = new Set();
     rooms.forEach(r => r.assignedEmployees.forEach(id => userIds.add(id.toString())));
 
-    const users = await User.find({ _id: { $in: Array.from(userIds) } }).select("name email avatarUrl githubUsername");
+    // Include company admin as repository lead
+    const companyAdmin = await User.findOne({ company: repo.company, role: "company" });
+    if (companyAdmin) userIds.add(companyAdmin._id.toString());
+
+    const users = await User.find({ _id: { $in: Array.from(userIds) } }).select("name email avatarUrl githubUsername role");
     res.json(users);
   } catch (err) {
     next(err);
@@ -220,7 +186,9 @@ router.get("/contributors/:repositoryId", async (req, res, next) => {
       return res.status(404).json({ message: "Repository not found" });
     }
 
-    // Load commit counts per author in database
+    const companyAdmin = await User.findOne({ company: repo.company, role: "company" });
+    const ownerName = companyAdmin ? `${companyAdmin.name} (${companyAdmin.email})` : "Engineering Lead";
+
     const commits = await CommitMemory.find({ repository: repo._id });
     const counts = {};
     commits.forEach(c => {
@@ -235,9 +203,9 @@ router.get("/contributors/:repositoryId", async (req, res, next) => {
     }));
 
     res.json({
-      owner: "Engineering Lead (SK)",
+      owner: ownerName,
       contributors: contributorsList,
-      aiKnowledgeLeader: contributorsList[0]?.name || "Alex Johnson"
+      aiKnowledgeLeader: contributorsList[0]?.name || (companyAdmin ? companyAdmin.name : "Engineering Lead")
     });
   } catch (err) {
     next(err);

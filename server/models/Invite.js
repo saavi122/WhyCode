@@ -7,7 +7,7 @@ const inviteSchema = new mongoose.Schema(
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     token: { type: String, required: true, unique: true },
-    status: { type: String, enum: ["pending", "accepted", "expired"], default: "pending" },
+    status: { type: String, enum: ["pending", "accepted", "expired", "revoked"], default: "pending" },
     expiresAt: { type: Date, required: true },
     // Optional repo assignment when inviting
     assignedRepo: { type: String, default: null }, // fullName e.g. "octocat/Hello-World"

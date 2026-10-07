@@ -55,9 +55,11 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("employee_sidebar_collapsed");
+    localStorage.removeItem("sidebar_collapsed");
     setToken(null);
     setUser(null);
-    navigate("/");
+    window.location.href = "/";
   };
 
   const value = {

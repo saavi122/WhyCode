@@ -1,0 +1,85 @@
+# Render Infrastructure as Code Blueprint for WhyCode Backend
+# NOTE: Deploy in the region closest to your MongoDB Atlas and Qdrant Cloud clusters (e.g., 'oregon' for us-west-2, or 'frankfurt' for eu-central-1) to minimize network RTT.
+services:
+  - type: web
+    name: whycode-server
+    runtime: node
+    plan: free
+    region: oregon # Region note: Colocated with cloud databases for low latency
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: node app.js
+    healthCheckPath: /api/health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_READ_ONLY
+        value: "true"
+      - key: DEMO_REPO_ALLOWLIST
+        value: "saavi122/gigsure,saavi122/whycode"
+      - key: THRESHOLDS_FILE
+        value: config/thresholds.demo.json
+
+      # Auto-generated secrets
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Database & Cache (Secrets marked sync:false)
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+      # Vector Database (Qdrant Cloud)
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+
+      # TEI Hugging Face Inference Spaces
+      - key: TEI_EMBEDDINGS_URL
+        sync: false
+      - key: TEI_RERANKER_URL
+        sync: false
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
+
+      # LLM Providers (vLLM / Groq / Gemini)
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        value: qwen2.5-coder:3b
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_EXTERNAL
+        value: "true"
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # GitHub App Integration
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_SLUG
+        value: whycode-dev
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_PRIVATE_KEY_B64
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: GITHUB_CALLBACK_URL
+        sync: false
+
+      # Client URLs
+      - key: CLIENT_URL
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false

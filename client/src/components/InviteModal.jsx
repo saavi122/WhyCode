@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Mail, User, Send, Check, GitBranch } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import API from "../services/api";
@@ -51,12 +52,12 @@ export default function InviteModal({ isOpen, onClose, onInviteSent }) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div style={{
       position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-      backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)",
+      backgroundColor: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 9999, fontFamily: "'Inter', sans-serif"
+      zIndex: 99999, fontFamily: "'Inter', sans-serif"
     }}>
       <div className="glass-card-premium" style={{
         padding: "32px", width: "100%", maxWidth: "420px", position: "relative",
@@ -189,6 +190,7 @@ export default function InviteModal({ isOpen, onClose, onInviteSent }) {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

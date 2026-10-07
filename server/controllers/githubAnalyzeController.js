@@ -1,4 +1,5 @@
 import { getAIClient } from "../config/ai.js";
+import { assertExternalLlmAllowed } from "../middleware/demoGuard.js";
 
 /**
  * POST /api/github/analyze-commit
@@ -13,6 +14,10 @@ export const analyzeCommit = async (req, res, next) => {
 
     if (!username || !repoName || !commitSha) {
       return res.status(400).json({ message: "username, repoName and commitSha are required" });
+    }
+
+    if (!assertExternalLlmAllowed({ fullName: `${username}/${repoName}` }, res)) {
+      return;
     }
 
     // 1. Fetch commit detail from GitHub public API (no token required for public repos)
@@ -142,6 +147,10 @@ export const analyzeRepo = async (req, res, next) => {
     const { username, repoName } = req.body;
     if (!username || !repoName) {
       return res.status(400).json({ message: "username and repoName are required" });
+    }
+
+    if (!assertExternalLlmAllowed({ fullName: `${username}/${repoName}` }, res)) {
+      return;
     }
 
     // 1. Fetch repo metadata

@@ -1,5 +1,12 @@
 import express from "express";
-import { getRepositories, registerRepository, getRepoRisk, deleteRepository, getGitHubRepos } from "../controllers/repoController.js";
+import {
+  getRepositories,
+  registerRepository,
+  getRepoRisk,
+  deleteRepository,
+  getGitHubRepos,
+  getRepoActivity,
+} from "../controllers/repoController.js";
 import protect from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -9,6 +16,8 @@ router.get("/github-list", protect, getGitHubRepos);
 router.get("/", protect, getRepositories);
 router.post("/", protect, registerRepository);
 router.get("/risk/:repoId", protect, getRepoRisk);
+router.get("/:repoId/activity", protect, getRepoActivity);
 router.delete("/:repoId", protect, deleteRepository);
 
 export default router;
+

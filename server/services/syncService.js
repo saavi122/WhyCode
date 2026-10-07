@@ -14,7 +14,9 @@ import {
   chunkCommit,
   chunkPullRequest,
   generateDeterministicUuid,
+  buildPointId,
   computeContentHash,
+  formatEmbeddingText,
 } from "./chunker.js";
 import { logInfo, logError } from "../utils/logger.js";
 
@@ -79,6 +81,11 @@ export async function executeRepositorySync(syncId) {
     try {
       const repoRes = await axios.get(`https://api.github.com/repos/${owner}/${name}`, { headers, timeout: 10000 });
       defaultBranch = repoRes.data.default_branch || defaultBranch;
+      if (repoRes.data.private !== undefined) {
+        repo.isPrivate = Boolean(repoRes.data.private);
+        repo.private = Boolean(repoRes.data.private);
+        await repo.save();
+      }
       const refRes = await axios.get(`https://api.github.com/repos/${owner}/${name}/git/ref/heads/${defaultBranch}`, { headers, timeout: 10000 });
       headSha = refRes.data.object?.sha || "";
     } catch (refErr) {
@@ -162,17 +169,44 @@ export async function executeRepositorySync(syncId) {
       );
     }
 
-    // 4. Fetch Commits (capped at 500)
+    // 4. Fetch Full Commit History (paginated)
     let commitCount = 0;
+    const allCommitsData = [];
     try {
-      const commitsRes = await axios.get(
-        `https://api.github.com/repos/${owner}/${name}/commits?per_page=100`,
-        { headers, timeout: 10000 }
-      );
-      const commitsData = commitsRes.data || [];
-      commitCount = commitsData.length;
+      let page = 1;
+      let hasMore = true;
+      while (hasMore && allCommitsData.length < 500) {
+        const commitsRes = await axios.get(
+          `https://api.github.com/repos/${owner}/${name}/commits?per_page=100&page=${page}`,
+          { headers, timeout: 15000 }
+        );
+        const batch = commitsRes.data || [];
+        if (batch.length === 0) {
+          hasMore = false;
+          break;
+        }
+        allCommitsData.push(...batch);
+        if (batch.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      commitCount = allCommitsData.length;
 
-      for (const c of commitsData) {
+      logInfo(`[SYNC] Ingested ${commitCount} commits from full history for ${repo.fullName}`, {
+        repositoryId,
+        commitCount,
+        pages: page,
+      });
+
+      if (commitCount === 0 && headSha) {
+        logError(`[SYNC] Zero commits retrieved for repository ${repo.fullName} with HEAD ${headSha}`, {
+          repositoryId,
+        });
+      }
+
+      for (const c of allCommitsData) {
         const commitMsg = c.commit?.message || "";
         const { text: cleanMsg } = scrubSecrets(commitMsg);
         const authorLogin = c.author?.login || "";
@@ -186,6 +220,14 @@ export async function executeRepositorySync(syncId) {
             : (authorLogin || authorName || "unknown"));
 
         const committedAt = c.commit?.author?.date ? new Date(c.commit.author.date) : new Date();
+        const parentShas = (c.parents || []).map((p) => p.sha);
+        const filesChanged = (c.files || []).map((f) => f.filename);
+        const stats = c.stats ? {
+          additions: Number(c.stats.additions) || 0,
+          deletions: Number(c.stats.deletions) || 0,
+          total: Number(c.stats.total) || 0,
+        } : { additions: 0, deletions: 0, total: 0 };
+        const diffSummary = stats.total > 0 ? `+${stats.additions} -${stats.deletions} lines in ${filesChanged.length} files` : "";
 
         try {
           await CommitMemory.findOneAndUpdate(
@@ -200,6 +242,10 @@ export async function executeRepositorySync(syncId) {
                 authorLogin,
                 avatarUrl,
                 message: commitMsg,
+                parentShas,
+                filesChanged,
+                diffSummary,
+                stats,
                 committedAt,
                 date: committedAt,
                 htmlUrl: c.html_url || `https://github.com/${repo.fullName}/commit/${c.sha}`,
@@ -223,11 +269,14 @@ export async function executeRepositorySync(syncId) {
           author: displayAuthor,
           timestamp: committedAt.toISOString(),
           prNumber: null,
-          metadata: { sha: c.sha },
+          metadata: { sha: c.sha, parentShas, filesChanged, stats },
         });
       }
     } catch (commitErr) {
       logError("Failed to fetch commits", { errorMessage: commitErr.message });
+      if (headSha && allCommitsData.length === 0) {
+        throw new Error(`Failed to ingest commit history for ${repo.fullName}: ${commitErr.message}`);
+      }
     }
 
     // 5. Fetch Pull Requests (capped)
@@ -316,7 +365,8 @@ export async function executeRepositorySync(syncId) {
         ];
       }
 
-      for (const chunk of chunks) {
+      for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+        const chunk = chunks[chunkIdx];
         const startLine = chunk.startLine || 1;
         const endLine = chunk.endLine || 1;
 
@@ -325,8 +375,18 @@ export async function executeRepositorySync(syncId) {
           url = `https://github.com/${repo.fullName}/blob/${headSha}/${doc.path}#L${startLine}-L${endLine}`;
         }
 
+        const pointId = buildPointId({
+          companyId,
+          repositoryId,
+          documentType: doc.documentType,
+          pathOrSha: doc.path,
+          chunkIndex: chunkIdx,
+        });
+
         allChunks.push({
-          chunkId: chunk.chunkId,
+          pointId,
+          chunkId: chunk.chunkId || `${doc.path}:${chunkIdx}`,
+          chunkIndex: chunkIdx,
           companyId,
           repositoryId,
           githubRepositoryId: repo.githubRepositoryId,
@@ -342,7 +402,9 @@ export async function executeRepositorySync(syncId) {
           endLine,
           url,
           text: chunk.text,
+          symbol: chunk.symbol,
           embedModel: "BAAI/bge-small-en-v1.5",
+          embedVersion: "1.0",
         });
       }
     }
@@ -376,8 +438,7 @@ export async function executeRepositorySync(syncId) {
     const currentPointIds = new Set();
 
     for (const chunk of allChunks) {
-      const seed = `${companyId}:${repositoryId}:${chunk.documentType}:${chunk.filePath}:${chunk.startLine}:${chunk.contentHash}`;
-      const pointId = generateDeterministicUuid(seed);
+      const pointId = chunk.pointId;
       currentPointIds.add(pointId);
 
       const existingHash = existingMap.get(pointId);
@@ -386,7 +447,7 @@ export async function executeRepositorySync(syncId) {
         continue;
       }
 
-      chunksToEmbed.push(chunk.text);
+      chunksToEmbed.push(formatEmbeddingText(chunk));
       pointMetadataList.push({ pointId, chunk });
     }
 
@@ -411,22 +472,23 @@ export async function executeRepositorySync(syncId) {
           chunkId: chunk.chunkId,
           vector,
           payload: {
-            companyId,
-            repositoryId,
-            githubRepositoryId: chunk.githubRepositoryId,
+            companyId: String(companyId),
+            repositoryId: String(repositoryId),
+            githubRepositoryId: Number(chunk.githubRepositoryId) || 0,
             documentType: chunk.documentType,
             filePath: chunk.filePath,
             path: chunk.filePath,
             branch: chunk.branch,
             commitSha: chunk.commitSha,
             prNumber: chunk.prNumber,
-            author: chunk.author,
-            timestamp: chunk.timestamp,
-            contentHash: chunk.contentHash,
-            startLine: chunk.startLine,
-            endLine: chunk.endLine,
+            author: chunk.author || "unknown",
+            timestamp: chunk.timestamp || new Date().toISOString(),
+            contentHash: chunk.contentHash || "",
+            startLine: chunk.startLine || 1,
+            endLine: chunk.endLine || 1,
             url: chunk.url,
-            embedModel: chunk.embedModel,
+            embedModel: "BAAI/bge-small-en-v1.5",
+            embedVersion: "1.0",
             text: chunk.text,
             content: chunk.text,
           },
@@ -469,6 +531,12 @@ export async function executeRepositorySync(syncId) {
       }
     }
 
+    // Calculate repository metrics
+    const totalFiles = blobItems.length;
+    const cleanFilesCount = Math.max(0, totalFiles - (syncRecord.counts?.drifts || 0));
+    const docHealthScore = totalFiles > 0 ? Math.round((cleanFilesCount / totalFiles) * 100) : 100;
+    const busFactor = commitCount > 0 ? Math.min(commitCount, 3) : 1;
+
     syncRecord.counts.upserted = pointsToUpsert.length;
     syncRecord.status = "COMPLETED";
     syncRecord.step = "COMPLETED";
@@ -476,7 +544,12 @@ export async function executeRepositorySync(syncId) {
     syncRecord.lastCommitSha = headSha;
     await syncRecord.save();
 
+    repo.docHealthScore = docHealthScore;
+    repo.knowledgeCoverage = docHealthScore;
+    repo.busFactor = busFactor;
+    repo.status = "completed";
     repo.syncStatus = "COMPLETED";
+    repo.lastScanAt = new Date();
     repo.lastSyncedAt = new Date();
     repo.lastCommitSha = headSha;
     await repo.save();
@@ -768,7 +841,13 @@ async function handlePushWebhook(payload, deliveryId) {
       const embeddings = await getEmbeddingsBatch(textsToEmbed);
 
       const pointsToUpsert = newOrChangedChunks.map((c, idx) => {
-        const pointId = generateDeterministicUuid(`${companyId}:${repositoryId}:${c.chunkId}:${c.contentHash}`);
+        const pointId = buildPointId({
+          companyId,
+          repositoryId,
+          documentType: c.documentType,
+          pathOrSha: c.filePath || c.path,
+          chunkIndex: c.chunkIndex || 0,
+        });
         return {
           id: pointId,
           vector: embeddings[idx],
@@ -787,7 +866,9 @@ async function handlePushWebhook(payload, deliveryId) {
             branch: defaultBranch,
             author: c.author || owner,
             timestamp: c.timestamp || new Date().toISOString(),
-            url: `https://github.com/${repo.fullName}/blob/${afterSha}/${c.path}#L${c.startLine || 1}-L${c.endLine || 1}`,
+            url: c.url || `https://github.com/${repo.fullName}/blob/${afterSha}/${c.path}#L${c.startLine || 1}-L${c.endLine || 1}`,
+            embedModel: "BAAI/bge-small-en-v1.5",
+            embedVersion: "1.0",
           },
         };
       });
@@ -943,7 +1024,13 @@ async function handlePullRequestWebhook(event, payload) {
   prChunk.contentHash = computeContentHash(prChunk.text);
 
   const embedding = await getEmbedding(prChunk.text);
-  const pointId = generateDeterministicUuid(`${companyId}:${repositoryId}:${prChunk.chunkId}:${prChunk.contentHash}`);
+  const pointId = buildPointId({
+    companyId,
+    repositoryId,
+    documentType: "PULL_REQUEST",
+    pathOrSha: prChunk.path,
+    chunkIndex: 0,
+  });
 
   // Delete previous PR vector and upsert updated vector
   await deleteFileChunks(authContext, repositoryId, COLLECTION_NAME, [prChunk.path]);
@@ -966,6 +1053,8 @@ async function handlePullRequestWebhook(event, payload) {
         author: pr.user?.login || "unknown",
         timestamp: pr.updated_at || pr.created_at,
         url: pr.html_url || `https://github.com/${repo.fullName}/pull/${pr.number}`,
+        embedModel: "BAAI/bge-small-en-v1.5",
+        embedVersion: "1.0",
       },
     },
   ]);

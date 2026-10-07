@@ -1,17 +1,18 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 
 export default function ConfirmDialog({ isOpen, title, message, confirmLabel = "Delete", onConfirm, onCancel }) {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div style={{
       position: "fixed",
       top: 0,
       left: 0,
       width: "100vw",
       height: "100vh",
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
+      backgroundColor: "rgba(0, 0, 0, 0.8)",
       backdropFilter: "blur(12px)",
       display: "flex",
       alignItems: "center",
@@ -63,6 +64,7 @@ export default function ConfirmDialog({ isOpen, title, message, confirmLabel = "
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

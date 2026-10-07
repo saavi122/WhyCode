@@ -4,8 +4,6 @@ import Invite from "../models/Invite.js";
 import Repository from "../models/Repository.js";
 import Room from "../models/Room.js";
 import RepositorySync from "../models/RepositorySync.js";
-import RepositoryChunk from "../models/RepositoryChunk.js";
-import PullRequest from "../models/PullRequest.js";
 import Drift from "../models/Drift.js";
 import CommitMemory from "../models/CommitMemory.js";
 import KnowledgeQA from "../models/KnowledgeQA.js";
@@ -144,8 +142,6 @@ export const deleteCompany = async (req, res, next) => {
     await Promise.all([
       Repository.deleteMany({ $or: [{ companyId }, { company: companyId }] }),
       RepositorySync.deleteMany({ companyId }),
-      RepositoryChunk.deleteMany({ companyId }),
-      PullRequest.deleteMany({ companyId }),
       Drift.deleteMany({ companyId }),
       CommitMemory.deleteMany({ companyId }),
       KnowledgeQA.deleteMany({ companyId }),

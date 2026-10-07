@@ -16,21 +16,45 @@ import AuthCallback from "./components/AuthCallback";
 import GitHubCallbackComplete from "./pages/GitHubCallbackComplete";
 
 import ReportsPage from "./pages/ReportsPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import PricingPage from "./pages/PricingPage";
 
 import { ToastProvider } from "./context/ToastContext";
 
 export default function App() {
   const isDemo = import.meta.env.VITE_DEMO_MODE === "true" || window.location.hostname.includes("demo") || window.location.hostname.includes("vercel.app");
+  const [wakingServer, setWakingServer] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleStatus = (e) => {
+      if (e.detail?.waking) {
+        setWakingServer(true);
+      } else {
+        setWakingServer(false);
+      }
+    };
+    window.addEventListener("whycode:server-status", handleStatus);
+    return () => window.removeEventListener("whycode:server-status", handleStatus);
+  }, []);
 
   return (
     <AuthProvider>
       <ThemeProvider>
         <SprintProvider>
           <ToastProvider>
-            {isDemo && (
+            {wakingServer && (
+              <div className="bg-amber-600/90 text-white text-xs py-1.5 px-4 text-center font-medium border-b border-amber-400/40 flex items-center justify-center gap-2 sticky top-0 z-50 animate-pulse">
+                <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>Waking up the server... Please wait a moment (cold start on free tier).</span>
+              </div>
+            )}
+            {isDemo && !wakingServer && (
               <div className="bg-gradient-to-r from-indigo-900/90 via-purple-900/90 to-indigo-900/90 text-indigo-200 text-xs py-1 px-4 text-center font-medium border-b border-indigo-500/30 flex items-center justify-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Demo Environment: Public Repositories Only & Read-Only Protection Active</span>
+                <span>Demo: public repositories only</span>
               </div>
             )}
             <Routes>
@@ -45,6 +69,9 @@ export default function App() {
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/github/callback-complete" element={<GitHubCallbackComplete />} />
               <Route path="/recruiter" element={<RecruiterOS />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/payment" element={<CheckoutPage />} />
               <Route path="/reports" element={
                 <ProtectedRoute>
                   <ReportsPage />

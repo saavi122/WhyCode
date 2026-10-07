@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -13,6 +13,7 @@ import API from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import StatCard from "../components/StatCard";
 import ReactMarkdown from "react-markdown";
+import { toDisplayName } from "../utils/textUtils";
 import "./EmployeeDashboard.css";
 
 export default function EmployeeDashboard() {
@@ -96,6 +97,13 @@ export default function EmployeeDashboard() {
       return res.data;
     }
   });
+
+  // Auto-select primary repository when repositories load
+  useEffect(() => {
+    if (!selectedRepo && Array.isArray(repositories) && repositories.length > 0) {
+      setSelectedRepo(repositories[0]);
+    }
+  }, [repositories, selectedRepo]);
 
   // 5. Activity log (Team activity feed)
   const { data: activity, isLoading: activityLoading } = useQuery({
@@ -184,11 +192,29 @@ export default function EmployeeDashboard() {
   // Chat Mutation (uses dynamic RAG)
   const chatMutation = useMutation({
     mutationFn: async (question) => {
-      const res = await API.post("/employee/chat", { question });
+      const res = await API.post("/employee/chat", { question, repoId: selectedRepo?._id });
       return res.data;
     },
     onSuccess: (data) => {
-      setChatMessages((prev) => [...prev, { role: "assistant", text: data.answer }]);
+      const isRefusal = !data.grounded && !data.error && (data.answer?.toLowerCase().includes("couldn't find sufficient evidence") || (data.citations && data.citations.length === 0));
+      const isError = Boolean(data.error) || data.answer === "Answer model is not running";
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: data.answer,
+          citations: data.citations || [],
+          sources: data.sources || data.retrievedEvidence || [],
+          grounded: data.grounded,
+          error: data.error || (isError ? data.answer : null),
+          isRefusal,
+          answerMode: data.answerMode,
+          banner: data.banner,
+          answeredBy: data.answeredBy || null,
+          notice: data.notice || null,
+        },
+      ]);
     },
     onError: (err) => {
       showToast(err.response?.data?.message || "AI failed to respond.", "error");
@@ -350,6 +376,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold text-white truncate">{profile?.name}</span>
+                <span className="text-[10px] text-[#00D9FF] truncate font-mono">{profile?.email}</span>
                 <span className="text-[9.5px] text-[#71717a] truncate uppercase font-extrabold tracking-wider">{profile?.designation}</span>
               </div>
             </div>
@@ -417,6 +444,7 @@ export default function EmployeeDashboard() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-xs font-bold text-white truncate">{profile?.name}</span>
+                    <span className="text-[10px] text-[#00D9FF] truncate font-mono">{profile?.email}</span>
                     <span className="text-[9.5px] text-[#71717a] truncate uppercase font-extrabold tracking-wider">{profile?.designation}</span>
                   </div>
                 </div>
@@ -453,7 +481,10 @@ export default function EmployeeDashboard() {
               <Mail size={15} />
               <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-[#00D9FF]" />
             </div>
-            <div className="w-7 h-7 rounded-full bg-[#00D9FF]/10 border border-[#00D9FF]/20 flex items-center justify-center font-bold text-[10.5px] text-[#00D9FF]">
+            <div
+              className="w-7 h-7 rounded-full bg-[#00D9FF]/10 border border-[#00D9FF]/20 flex items-center justify-center font-bold text-[10.5px] text-[#00D9FF]"
+              title={profile ? `${profile.name} (${profile.email})` : "Employee Profile"}
+            >
               {profile?.initials || "EM"}
             </div>
           </div>
@@ -481,9 +512,11 @@ export default function EmployeeDashboard() {
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="glass-panel-premium lg:col-span-2 flex flex-col justify-between p-6 min-h-[160px]">
                       <div>
-                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Welcome Back, Developer 💻</h2>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                          Welcome Back, {profile?.name || "Developer"} 💻
+                        </h2>
                         <p className="text-[11px] text-[#a1a1aa] mt-1.5 leading-relaxed">
-                          Your workspace telemetry is performing optimally. Commits ledger is linked with the active AST indexer.
+                          Logged in as <span className="text-[#00D9FF] font-mono">{profile?.email}</span> • Workspace telemetry for <strong className="text-white">{profile?.companyName || "WhyCode"}</strong> is performing optimally.
                         </p>
                       </div>
 
@@ -955,39 +988,217 @@ export default function EmployeeDashboard() {
                   style={{ height: "calc(100vh - 140px)" }}
                 >
                   <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                    <h3 className="text-lg font-black text-white uppercase tracking-tight">AI Assistant Chat</h3>
-                    <span className="status-badge-custom badge-emerald">SSO scope active</span>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight">AI Assistant Chat</h3>
+                      {selectedRepo && (
+                        <span className="px-2 py-0.5 rounded-md bg-[#00D9FF]/10 border border-[#00D9FF]/20 text-[10px] font-bold text-[#00D9FF]">
+                          {selectedRepo.fullName || selectedRepo.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {repositories && repositories.length > 1 && (
+                        <select
+                          value={selectedRepo?._id || ""}
+                          onChange={(e) => {
+                            const r = repositories.find((x) => x._id === e.target.value);
+                            if (r) setSelectedRepo(r);
+                          }}
+                          className="bg-[#121216] text-xs text-[#cbd5e1] border border-white/10 rounded-lg px-2 py-1 outline-none"
+                        >
+                          {repositories.map((r) => (
+                            <option key={r._id} value={r._id}>
+                              {r.fullName || r.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <span className="status-badge-custom badge-emerald">SSO scope active</span>
+                    </div>
                   </div>
 
                   <div className="chat-messages-container flex-grow pr-2">
                     {chatMessages.map((msg, index) => (
                       <div
                         key={index}
-                        className={`chat-bubble ${msg.role === "user" ? "user" : "assistant"}`}
+                        className={`chat-bubble ${msg.role === "user" ? "user" : "assistant"} flex flex-col gap-3`}
                       >
                         {msg.role === "assistant" ? (
-                          <ReactMarkdown
-                            components={{
-                              h3: ({children}) => <h3 style={{fontSize:"1rem",fontWeight:700,color:"#4ade80",margin:"8px 0 6px"}}>{children}</h3>,
-                              h4: ({children}) => <h4 style={{fontSize:"0.88rem",fontWeight:600,color:"#94a3b8",margin:"8px 0 4px"}}>{children}</h4>,
-                              p:  ({children}) => <p  style={{marginBottom:"6px",lineHeight:"1.65",color:"#cbd5e1"}}>{children}</p>,
-                              strong: ({children}) => <strong style={{color:"#e2e8f0",fontWeight:600}}>{children}</strong>,
-                              em: ({children}) => <em style={{color:"#a5b4fc"}}>{children}</em>,
-                              ul: ({children}) => <ul style={{paddingLeft:"18px",marginBottom:"8px",color:"#cbd5e1"}}>{children}</ul>,
-                              li: ({children}) => <li style={{marginBottom:"3px",lineHeight:"1.5"}}>{children}</li>,
-                              code: ({node, inline, children, ...props}) => inline
-                                ? <code style={{background:"rgba(255,255,255,0.1)",padding:"2px 5px",borderRadius:"4px",fontSize:"0.78rem",color:"#7dd3fc",fontFamily:"monospace"}} {...props}>{children}</code>
-                                : <pre style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"10px 14px",overflowX:"auto",marginBottom:"10px"}}><code style={{fontSize:"0.76rem",color:"#a5f3fc",fontFamily:"monospace",whiteSpace:"pre"}} {...props}>{children}</code></pre>,
-                              table: ({children}) => <div style={{overflowX:"auto",marginBottom:"10px"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.81rem"}}>{children}</table></div>,
-                              thead: ({children}) => <thead style={{background:"rgba(255,255,255,0.06)"}}>{children}</thead>,
-                              th: ({children}) => <th style={{padding:"5px 10px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid rgba(255,255,255,0.12)"}}>{children}</th>,
-                              td: ({children}) => <td style={{padding:"5px 10px",color:"#cbd5e1",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>{children}</td>,
-                            }}
-                          >
-                            {msg.text}
-                          </ReactMarkdown>
+                          <>
+                            {/* Header Status Badge */}
+                            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                              <span className="text-[10px] font-bold text-[#00D9FF] uppercase tracking-wider flex items-center gap-1">
+                                <Sparkles size={11} /> WhyCode Companion
+                              </span>
+
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {msg.error ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-bold text-red-400 flex items-center gap-1">
+                                    <AlertTriangle size={11} /> {msg.error === "Answer model is not running" ? "Model Offline" : "Error"}
+                                  </span>
+                                ) : msg.answeredBy?.engine === "gemini" ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-[10px] font-bold text-purple-300 flex items-center gap-1">
+                                    <Sparkles size={11} /> {msg.answeredBy?.fallbackReason ? "Gemini (fallback)" : "Gemini"}
+                                  </span>
+                                ) : msg.answeredBy?.engine === "primary" ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-[#00D9FF]/10 border border-[#00D9FF]/30 text-[10px] font-bold text-[#00D9FF] flex items-center gap-1">
+                                    <Cpu size={11} /> RAG model
+                                  </span>
+                                ) : msg.answeredBy?.engine === "evidence" || msg.answerMode === "evidence" || msg.banner ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                                    <FileText size={11} /> Evidence only
+                                  </span>
+                                ) : null}
+
+                                {msg.isRefusal ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                                    <AlertCircle size={11} /> Insufficient Evidence
+                                  </span>
+                                ) : msg.grounded ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-[#10b981]/10 border border-[#10b981]/20 text-[10px] font-bold text-[#10b981] flex items-center gap-1">
+                                    <Check size={11} /> Grounded (100% Evidence)
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            {/* Fallback Notice */}
+                            {msg.notice && (
+                              <div className="p-3 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-200 text-xs flex items-center gap-2">
+                                <AlertTriangle size={14} className="text-purple-400 shrink-0" />
+                                <span className="font-medium">{msg.notice}</span>
+                              </div>
+                            )}
+
+                            {/* Evidence Mode Banner */}
+                            {msg.banner && (
+                              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
+                                <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+                                <span className="font-medium">{msg.banner}</span>
+                              </div>
+                            )}
+
+                            {/* Error Banner if Model Offline */}
+                            {msg.error && (
+                              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2">
+                                <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                                <span>{msg.text || "Answer model is not running"}</span>
+                              </div>
+                            )}
+
+                            {/* Markdown Answer Text */}
+                            {!msg.error && msg.text && (
+                              <div className="text-xs text-[#e4e4e7] leading-relaxed">
+                                <ReactMarkdown
+                                  components={{
+                                    h3: ({children}) => <h3 style={{fontSize:"1rem",fontWeight:700,color:"#4ade80",margin:"8px 0 6px"}}>{children}</h3>,
+                                    h4: ({children}) => <h4 style={{fontSize:"0.88rem",fontWeight:600,color:"#94a3b8",margin:"8px 0 4px"}}>{children}</h4>,
+                                    p:  ({children}) => <p  style={{marginBottom:"6px",lineHeight:"1.65",color:"#cbd5e1"}}>{children}</p>,
+                                    strong: ({children}) => <strong style={{color:"#e2e8f0",fontWeight:600}}>{children}</strong>,
+                                    em: ({children}) => <em style={{color:"#a5b4fc"}}>{children}</em>,
+                                    ul: ({children}) => <ul style={{paddingLeft:"18px",marginBottom:"8px",color:"#cbd5e1"}}>{children}</ul>,
+                                    li: ({children}) => <li style={{marginBottom:"3px",lineHeight:"1.5"}}>{children}</li>,
+                                    code: ({node, inline, children, ...props}) => {
+                                      const textStr = String(children || "");
+                                      // Render citation chips [C1], [CM1], [D1], [PR1]
+                                      const isCitation = /^\[(C|CM|D|PR)\d+\]$/i.test(textStr.trim());
+                                      if (isCitation) {
+                                        return (
+                                          <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-[#00D9FF]/15 text-[#00D9FF] font-mono text-[10px] font-bold border border-[#00D9FF]/30 mx-0.5">
+                                            {textStr}
+                                          </span>
+                                        );
+                                      }
+                                      return inline
+                                        ? <code style={{background:"rgba(255,255,255,0.1)",padding:"2px 5px",borderRadius:"4px",fontSize:"0.78rem",color:"#7dd3fc",fontFamily:"monospace"}} {...props}>{children}</code>
+                                        : <pre style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"10px 14px",overflowX:"auto",marginBottom:"10px"}}><code style={{fontSize:"0.76rem",color:"#a5f3fc",fontFamily:"monospace",whiteSpace:"pre"}} {...props}>{children}</code></pre>;
+                                    },
+                                    table: ({children}) => <div style={{overflowX:"auto",marginBottom:"10px"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.81rem"}}>{children}</table></div>,
+                                    thead: ({children}) => <thead style={{background:"rgba(255,255,255,0.06)"}}>{children}</thead>,
+                                    th: ({children}) => <th style={{padding:"5px 10px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid rgba(255,255,255,0.12)"}}>{children}</th>,
+                                    td: ({children}) => <td style={{padding:"5px 10px",color:"#cbd5e1",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>{children}</td>,
+                                  }}
+                                >
+                                  {msg.text}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+
+                            {/* Evidence Panel (Citations & Sources) */}
+                            {((msg.citations && msg.citations.length > 0) || (msg.sources && msg.sources.length > 0)) && (
+                              <div className="mt-2 p-3 rounded-xl border border-white/5 bg-black/40 flex flex-col gap-2">
+                                <div className="flex items-center justify-between text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                                  <span className="flex items-center gap-1.5 text-[#00D9FF]">
+                                    <FileText size={12} /> {msg.banner || msg.answerMode === "evidence" ? "Relevant Repository Evidence" : (msg.error ? "Retrieved evidence" : (msg.citations && msg.citations.length > 0 ? "Verified Citations" : "Retrieved evidence"))}
+                                  </span>
+                                  <span>{((msg.citations && msg.citations.length > 0) ? msg.citations.length : msg.sources.length)} items</span>
+                                </div>
+
+                                <div className="flex flex-col gap-1.5 mt-1">
+                                  {((msg.citations && msg.citations.length > 0) ? msg.citations : msg.sources).map((src, sIdx) => {
+                                    const label = src.evidenceId || `E${sIdx + 1}`;
+                                    const shortSha = src.commitSha ? src.commitSha.slice(0, 7) : null;
+
+                                    return (
+                                      <div
+                                        key={sIdx}
+                                        className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5 text-[11px] hover:border-[#00D9FF]/20 transition gap-2"
+                                      >
+                                        <div className="flex items-center gap-2 overflow-hidden flex-wrap">
+                                          <span className="px-1.5 py-0.5 rounded bg-[#00D9FF]/10 text-[#00D9FF] font-mono text-[9px] font-bold shrink-0">
+                                            {label}
+                                          </span>
+
+                                          {src.path && (
+                                            <span className="font-mono text-white text-[11px] truncate max-w-[240px]">
+                                              {src.path}
+                                            </span>
+                                          )}
+
+                                          {src.lineRange && src.lineRange[0] && (
+                                            <span className="text-[10px] text-[#71717a] font-mono shrink-0">
+                                              #L{src.lineRange[0]}-L{src.lineRange[1]}
+                                            </span>
+                                          )}
+
+                                          {shortSha && (
+                                            <span className="px-1.5 py-0.5 rounded bg-white/5 text-[#a1a1aa] font-mono text-[9px]">
+                                              commit: {shortSha}
+                                            </span>
+                                          )}
+
+                                          {src.prNumber && (
+                                            <span className="px-1.5 py-0.5 rounded bg-[#7C3AED]/10 text-[#a78bfa] font-mono text-[9px]">
+                                              PR #{src.prNumber}
+                                            </span>
+                                          )}
+
+                                          {src.author && (
+                                            <span className="text-[10px] text-[#71717a]">
+                                              by {toDisplayName(src.author)}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {src.url && (
+                                          <a
+                                            href={src.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] font-mono text-[#00D9FF] hover:underline flex items-center gap-1 shrink-0 ml-2"
+                                          >
+                                            View ↗
+                                          </a>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          msg.text
+                          <p className="text-xs">{msg.text}</p>
                         )}
                       </div>
                     ))}

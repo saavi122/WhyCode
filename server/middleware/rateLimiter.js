@@ -9,6 +9,7 @@ export const chatRateLimiter = rateLimit({
   max: 20, // max 20 requests per window per user
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   keyGenerator: (req) => {
     return req.user?.id || req.user?._id || req.ip;
   },
@@ -30,6 +31,7 @@ export const syncRateLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   keyGenerator: (req) => {
     return req.user?.company || req.user?.id || req.ip;
   },
@@ -51,6 +53,7 @@ export const webhookRateLimiter = rateLimit({
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   keyGenerator: (req) => {
     return req.ip;
   },

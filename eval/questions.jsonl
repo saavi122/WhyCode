@@ -1,0 +1,40 @@
+{"question": "How is user authentication managed and stored in the frontend?", "type": "code", "expectedPaths": ["client/src/context/AuthContext.jsx", "client/src/components/ProtectedRoute.jsx"]}
+{"question": "What endpoints or routes are configured in the ML service FastAPI application?", "type": "code", "expectedPaths": ["ml-service/main.py", "ml-service/test_endpoints.py"]}
+{"question": "How does the fraud detection utility calculate risk scores in the ML service?", "type": "code", "expectedPaths": ["ml-service/fraud_utils.py"]}
+{"question": "What features and tabs are available on the Worker dashboard page?", "type": "code", "expectedPaths": ["client/src/pages/Worker.jsx"]}
+{"question": "How does the Insurer page handle policy management and claims review?", "type": "code", "expectedPaths": ["client/src/pages/Insurer.jsx", "client/src/services/insurerService.js"]}
+{"question": "How does the Admin page manage users, platform metrics, and system controls?", "type": "code", "expectedPaths": ["client/src/pages/Admin.jsx", "client/src/services/adminService.js", "client/src/hooks/useAdminData.js"]}
+{"question": "How are real-time notifications handled across the client application?", "type": "code", "expectedPaths": ["client/src/context/NotificationContext.jsx", "client/src/hooks/useNotifications.js", "client/src/components/NotificationBell.jsx"]}
+{"question": "What routes and page components are configured in App.jsx?", "type": "architecture", "expectedPaths": ["client/src/App.jsx"]}
+{"question": "How is policy checkout and pricing calculated on the pricing and checkout pages?", "type": "code", "expectedPaths": ["client/src/pages/Pricing.jsx", "client/src/pages/Checkout.jsx"]}
+{"question": "How does the weather forecast or parametric risk trigger work in the Weather component?", "type": "code", "expectedPaths": ["client/src/pages/Weather.jsx"]}
+{"question": "How are insurance claims submitted and tracked in Claim.jsx?", "type": "code", "expectedPaths": ["client/src/pages/Claim.jsx"]}
+{"question": "What is the primary architecture and purpose of the GigSure repository according to the README?", "type": "docs", "expectedPaths": ["README.md"]}
+{"question": "What test cases exist for testing the ML service API endpoints?", "type": "code", "expectedPaths": ["ml-service/test_endpoints.py", "ml-service/test_api.py"]}
+{"question": "What recent commits exist in the repository history for insurance or fraud features?", "type": "commit", "expectedPaths": ["commits/0ca2464", "commits/16d638e", "commits/fc61df5"]}
+{"question": "How are beneficiary tests structured in the frontend test suite?", "type": "code", "expectedPaths": ["client/src/test/beneficiary.test.jsx", "client/src/test/setup.js"]}
+{"question": "How does the estimate-loss endpoint calculate loss in ml-service/main.py?", "type": "code", "expectedPaths": ["ml-service/main.py"]}
+{"question": "What environment variables are documented in the README for configuring the server?", "type": "docs", "expectedPaths": ["README.md"]}
+{"question": "What is the ZEBRA-CANARY-7391 service and what port does it run on?", "type": "docs", "expectedPaths": ["docs/canary_service.md"]}
+{"question": "How does the Home page render hero banners, statistics, and insurance benefits?", "type": "code", "expectedPaths": ["client/src/pages/Home.jsx"]}
+{"question": "How does Profile.jsx display user details, payment receipts, and policy history?", "type": "code", "expectedPaths": ["client/src/pages/Profile.jsx"]}
+{"question": "How does Dashboard.jsx render claim metrics, weather risk cards, and wallet balances?", "type": "code", "expectedPaths": ["client/src/pages/Dashboard.jsx"]}
+{"question": "What dependencies and scripts are defined in package.json?", "type": "code", "expectedPaths": ["package.json"]}
+{"question": "How does the insurer test suite verify claim approval and policy enrollment workflows?", "type": "code", "expectedPaths": ["client/src/test/insurer.test.jsx"]}
+{"question": "What machine learning dependencies are specified in requirements.txt?", "type": "code", "expectedPaths": ["ml-service/requirements.txt"]}
+{"question": "What initial commits exist in the git history of GigSure?", "type": "commit", "expectedPaths": ["commits/3c4c8ff", "commits/632fd16"]}
+{"question": "How does the Worker dashboard calculate daily active cover status?", "type": "code", "expectedPaths": ["client/src/pages/Worker.jsx"]}
+{"question": "How are axios API requests configured and intercepted in the frontend?", "type": "code", "expectedPaths": ["client/src/services/api.js", "client/src/services/authService.js"]}
+{"question": "What automated backend test suites are described in the local CI section of the README?", "type": "docs", "expectedPaths": ["README.md"]}
+{"question": "How does the parametric risk calculation evaluate threshold breaches?", "type": "code", "expectedPaths": ["ml-service/main.py", "ml-service/fraud_utils.py"]}
+{"question": "What UI components are used for modal dialogs and alert dialogs in the client?", "type": "code", "expectedPaths": ["client/src/components/Modal.jsx", "client/src/components/Alert.jsx", "client/src/components/ui/dialog.jsx"]}
+{"question": "How does the Bitcoin lightning payment network channel settlement work in this repository?", "type": "unanswerable", "expectedPaths": []}
+{"question": "Where is the Kubernetes Helm chart deployment configuration for the Rust microservice?", "type": "unanswerable", "expectedPaths": []}
+{"question": "How does the Kotlin Android mobile app sync offline sqlite database records?", "type": "unanswerable", "expectedPaths": []}
+{"question": "What are the AWS DynamoDB global secondary index partition keys for the logistics pipeline?", "type": "unanswerable", "expectedPaths": []}
+{"question": "Show me the commits authored by alex regarding the legacy PHP payment gateway.", "type": "unanswerable", "expectedPaths": []}
+{"question": "How does the Golang gRPC protobuf compiler generate service stubs in this project?", "type": "unanswerable", "expectedPaths": []}
+{"question": "Where is the Ruby on Rails ActiveRecord database migration for the billing ledger?", "type": "unanswerable", "expectedPaths": []}
+{"question": "What are the Terraform Azure firewall network security group rules for ingress traffic?", "type": "unanswerable", "expectedPaths": []}
+{"question": "How does the Swift iOS CoreData persistence layer handle background thread synchronization?", "type": "unanswerable", "expectedPaths": []}
+{"question": "What is the Ethereum Solidity smart contract address for the ERC-20 staking pool?", "type": "unanswerable", "expectedPaths": []}

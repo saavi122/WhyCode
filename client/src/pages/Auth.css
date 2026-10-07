@@ -355,6 +355,15 @@
   box-sizing: border-box;
 }
 
+.input-field-custom:-webkit-autofill,
+.input-field-custom:-webkit-autofill:hover,
+.input-field-custom:-webkit-autofill:focus,
+.input-field-custom:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #121215 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .input-field-custom:focus {
   border-color: rgba(0, 217, 255, 0.4);
   box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.1);

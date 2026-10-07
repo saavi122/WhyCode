@@ -66,26 +66,31 @@ app.listen(5000);`;
 // Fetch commit history for a file
 export const fetchFileCommits = async (token, owner, repo, path) => {
   if (!token || token.startsWith("mock")) {
-    return [
-      {
-        sha: "mocksha111111111111111111111111111111111",
-        commit: {
-          message: "feat: add user authentication controller",
-          author: { name: "Mock Developer", date: new Date().toISOString() },
-        },
-      },
-      {
-        sha: "mocksha222222222222222222222222222222222",
-        commit: {
-          message: "refactor: convert codebase to ES modules",
-          author: { name: "Mock Developer", date: new Date().toISOString() },
-        },
-      },
-    ];
+    return [];
   }
   const octokit = getGithubClient(token);
   const { data } = await octokit.repos.listCommits({ owner, repo, path, per_page: 30 });
   return data; // includes sha, commit.message, author, date
+};
+
+// Fetch repository commits (paginated)
+export const fetchRepoCommits = async (token, owner, repo, perPage = 100, page = 1) => {
+  if (!token || token.startsWith("mock")) {
+    return [];
+  }
+  const octokit = getGithubClient(token);
+  const { data } = await octokit.repos.listCommits({ owner, repo, per_page: perPage, page });
+  return data;
+};
+
+// Fetch full details of a single commit (including changed files)
+export const fetchCommitDetail = async (token, owner, repo, sha) => {
+  if (!token || token.startsWith("mock")) {
+    return null;
+  }
+  const octokit = getGithubClient(token);
+  const { data } = await octokit.repos.getCommit({ owner, repo, ref: sha });
+  return data;
 };
 
 // Fetch git blame via GraphQL (line-level authorship)

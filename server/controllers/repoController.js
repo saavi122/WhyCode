@@ -3,8 +3,6 @@ import Drift from "../models/Drift.js";
 import CommitMemory from "../models/CommitMemory.js";
 import KnowledgeQA from "../models/KnowledgeQA.js";
 import RepositorySync from "../models/RepositorySync.js";
-import RepositoryChunk from "../models/RepositoryChunk.js";
-import PullRequest from "../models/PullRequest.js";
 import { deleteRepositoryChunks } from "../services/qdrantStore.js";
 import * as githubService from "../services/githubService.js";
 
@@ -140,8 +138,6 @@ export const deleteRepository = async (req, res, next) => {
     await Promise.all([
       Repository.deleteOne({ _id: repoId }),
       RepositorySync.deleteMany({ repositoryId: repoId }),
-      RepositoryChunk.deleteMany({ repositoryId: repoId }),
-      PullRequest.deleteMany({ repositoryId: repoId }),
       Drift.deleteMany({ repository: repoId }),
       CommitMemory.deleteMany({ repository: repoId }),
       KnowledgeQA.deleteMany({ repository: repoId }),

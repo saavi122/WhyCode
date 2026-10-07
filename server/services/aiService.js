@@ -1,4 +1,6 @@
 import { getAIClient } from "../config/ai.js";
+import { assertLlmAllowed } from "./privacyGuard.js";
+import { servicesConfig } from "../config/services.js";
 
 // Schema for drift detection
 const driftSchema = {

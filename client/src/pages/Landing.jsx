@@ -56,23 +56,24 @@ export default function Landing() {
   ];
   const [activeSubtitleIdx, setActiveSubtitleIdx] = useState(0);
 
-  // 3. LIVE METRICS STATES (Ticking up)
-  const [metricRepos, setMetricRepos] = useState(2800);
-  const [metricNodes, setMetricNodes] = useState(1.78); // Millions
-  const [metricCommits, setMetricCommits] = useState(47.9); // Millions
-  const [metricHours, setMetricHours] = useState(1.19); // Millions
+  // Measured benchmark metrics from eval/REPORT.md (40 questions on 1 repository)
+  const benchmarkStats = [
+    { value: "85.0%", label: "DEV Split Recall@10", note: "40 questions on 1 repository" },
+    { value: "70.0%", label: "DEV Split Recall@5", note: "40 questions on 1 repository" },
+    { value: "100%", label: "Refusal Precision", note: "Out-of-scope (10/10)" },
+    { value: "100%", label: "Citation Validity", note: "Pinned permalinks" },
+  ];
 
-  // 4. FLOATING WINDOWS SIMULATORS
-  // Window 1: Commit Timeline Stream
-  const [commitTimeline, setCommitTimeline] = useState([
-    { id: "c7d8ef", msg: "refactor: optimize token verification", author: "Alex R.", time: "Just now" },
-    { id: "e1f2a3", msg: "fix: prevent pool connection leaks", author: "Jane K.", time: "2m ago" },
-    { id: "b3d4c5", msg: "feat: add schema registry validator", author: "Mark M.", time: "15m ago" }
-  ]);
+  // Example files for illustrative preview
+  const exampleFiles = [
+    { path: "src/utils/retry.js", desc: "Exponential backoff logic", status: "Indexed" },
+    { path: "src/context/AuthContext.jsx", desc: "Session token management", status: "Indexed" },
+    { path: "src/services/api.js", desc: "HTTP client interceptors", status: "Indexed" }
+  ];
   
-  // Window 2: AI Explanation (Linked to the top commit)
+  // Example AI Explanation
   const [aiExplanation, setAiExplanation] = useState(
-    "Switches auth logic to local central crypto utility. Prevents token replay vectors and aligns with security audits."
+    "The retry queue applies exponential backoff with randomized jitter to prevent server contention during transient errors."
   );
 
   // Window 4: Wave oscillator simulation for health chart
@@ -81,10 +82,10 @@ export default function Landing() {
   // Window 6: Streaming AI Thinking tokens
   const [thinkingStream, setThinkingStream] = useState("");
 
-  // Live Terminal Stream logs
+  // Terminal Stream logs
   const [terminalLogs, setTerminalLogs] = useState([
-    "System: Connected to GitHub webhook gateways...",
-    "System: Workspace initialized. Memory nodes online."
+    "System: Initializing repository context...",
+    "System: Knowledge index ready. Citations active."
   ]);
 
   // Handle global scroll for navbar and hero morphing
@@ -165,41 +166,11 @@ export default function Landing() {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveSubtitleIdx((prev) => (prev + 1) % subtitles.length);
-    }, 3800); // Transition every 3.8s
+    }, 3800);
     return () => clearInterval(interval);
   }, []);
 
-  // 3. LIVE METRICS UPWARD TICKET
-  useEffect(() => {
-    // Fast initial count-up
-    const duration = 2000;
-    const steps = 40;
-    const stepTime = duration / steps;
-    let stepCount = 0;
-
-    const timer = setInterval(() => {
-      stepCount++;
-      setMetricRepos(Math.floor(2000 + (847 / steps) * stepCount));
-      setMetricNodes(Number((1.2 + (0.6 / steps) * stepCount).toFixed(2)));
-      setMetricCommits(Number((40 + (8.0 / steps) * stepCount).toFixed(1)));
-      setMetricHours(Number((0.8 + (0.4 / steps) * stepCount).toFixed(1)));
-
-      if (stepCount >= steps) {
-        clearInterval(timer);
-        // Slowly increment continuously
-        setInterval(() => {
-          setMetricRepos(prev => prev + (Math.random() > 0.7 ? 1 : 0));
-          setMetricNodes(prev => Number((prev + 0.01).toFixed(2)));
-          setMetricCommits(prev => Number((prev + 0.1).toFixed(1)));
-          setMetricHours(prev => Number((prev + 0.1).toFixed(1)));
-        }, 4000);
-      }
-    }, stepTime);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // 4. FLOATING WINDOWS SIMULATIONS
+  // 3. FLOATING WINDOWS SIMULATIONS
   useEffect(() => {
     // A. Wave Oscillation loop for Health Chart (Window 4)
     let animationFrame;
@@ -211,56 +182,12 @@ export default function Landing() {
     };
     animateWave();
 
-    // B. Git Commit Timeline simulator (Window 1) pushes a new commit every 5s
-    const mockMsgs = [
-      "docs: clarify webhook endpoint routing",
-      "fix: patch websocket reconnect bounds",
-      "feat: bundle custom AST tree parser",
-      "refactor: merge memory nodes vector map",
-      "security: rotate database encryption salts"
-    ];
-    const mockAuthors = ["Sarah P.", "John D.", "Liam O.", "Sophia V.", "Nathan B."];
-    const mockExplanations = [
-      "Updates route tables inside the webhook module to prevent redundant index scans on non-push configurations.",
-      "Introduces backoff logic to the socket client handler. Mitigates server socket exhaustion during system restarts.",
-      "Builds an AST parser to index multi-file dependency trees during push payload evaluations.",
-      "Compresses vector structures into a unified index matrix, reducing graph retrieval times by 40%.",
-      "Rotates AES-256 database keys for vault assets, ensuring continuous compliance standards."
-    ];
-
-    const timelineInterval = setInterval(() => {
-      const idx = Math.floor(Math.random() * mockMsgs.length);
-      const newCommit = {
-        id: Math.random().toString(16).substring(2, 8),
-        msg: mockMsgs[idx],
-        author: mockAuthors[idx],
-        time: "Just now"
-      };
-
-      setCommitTimeline(prev => {
-        const updated = [newCommit, ...prev.slice(0, 2)];
-        // Update connected Window 2 AI Explanation automatically!
-        setAiExplanation(mockExplanations[idx]);
-        return updated;
-      });
-
-      // Append terminal output log as well
-      const logs = [
-        `[pipeline] Pushed commit ${newCommit.id} by ${newCommit.author}`,
-        `[pipeline] Parsing AST structures...`,
-        `[pipeline] AST synced. Memory nodes mapping complete.`
-      ];
-      setTerminalLogs(prev => [...prev.slice(-3), ...logs]);
-
-    }, 6000);
-
-    // C. Streaming AI Thinking Tokens simulator (Window 6)
+    // B. Streaming AI Thinking Tokens simulator (Window 6)
     const thinkingPhrases = [
       "Evaluating branch nodes...",
       "Analyzing import hashes...",
-      "Centralizing cryptographic tokens...",
-      "AST structural changes verified.",
-      "Vector indexes updated. OK.",
+      "Parsing AST structural changes...",
+      "Vector indexes updated with citations.",
       "Reviewing compliance constraints..."
     ];
     let phraseIdx = 0;
@@ -278,7 +205,6 @@ export default function Landing() {
 
     return () => {
       cancelAnimationFrame(animationFrame);
-      clearInterval(timelineInterval);
       clearInterval(thinkingInterval);
     };
   }, []);
@@ -391,9 +317,9 @@ Status: Success. AST alignment verified.`,
       label: "Generated Explanation",
       title: "3. Semantic Why-Explanation",
       desc: "An AI-powered explanation is generated, identifying architectural goals and security compliance reasons.",
-      code: `# AI Commit Explanation (ID: c7d8ef)
+      code: `# Example Explanation: Authentication Utility
 ## Architectural Goal
-Migrate raw token creation to centralized crypto utility to enforce SHA-256 integrity rules.
+Migrate token creation to centralized crypto utility to enforce SHA-256 integrity rules.
 
 ## Why this changed
 Ensures compliance with OWASP ASVS v4.0.3 requirements. Prevents secret rotation leaks.`,
@@ -633,48 +559,39 @@ Last Synced: 2 mins ago via WhyCode Bot.`,
             </button>
           </div>
 
-          {/* Live Metrics Counters ticking upward */}
+          {/* Measured Benchmark Statistics from eval/REPORT.md */}
           <div className="live-metrics-row">
-            <div className="metric-item">
-              <span className="metric-number">{metricRepos.toLocaleString()}</span>
-              <span className="metric-label">Repositories Indexed</span>
-            </div>
-            <div className="metric-item">
-              <span className="metric-number">{metricNodes}M</span>
-              <span className="metric-label">Knowledge Nodes</span>
-            </div>
-            <div className="metric-item">
-              <span className="metric-number">{metricCommits}M</span>
-              <span className="metric-label">Commits Explained</span>
-            </div>
-            <div className="metric-item">
-              <span className="metric-number">{metricHours}M</span>
-              <span className="metric-label">Developer Hours Saved</span>
-            </div>
+            {benchmarkStats.map((stat, idx) => (
+              <div key={idx} className="metric-item">
+                <span className="metric-number">{stat.value}</span>
+                <span className="metric-label">{stat.label}</span>
+                <span style={{ fontSize: "10px", color: "#71717a", marginTop: "2px" }}>{stat.note}</span>
+              </div>
+            ))}
           </div>
 
         </div>
 
-        {/* RIGHT COLUMN: Cinematic Dashboard & Live Terminal */}
+        {/* RIGHT COLUMN: Cinematic Dashboard & Terminal */}
         <div style={{ position: "relative" }}>
           
           <div className="dashboard-grid-container" style={{
             transform: `rotateY(${mousePos.x * 12}deg) rotateX(${mousePos.y * -12}deg)`
           }}>
             
-            {/* Window 1: Commit Timeline Stream */}
+            {/* Window 1: Example Structure Nodes */}
             <div className="floating-win win-commit-timeline glass-panel spotlight-card" 
                  onMouseMove={handleCardMouseMove}
                  style={{ transform: `translate3d(${mousePos.x * 20}px, ${mousePos.y * 20}px, 0)` }}>
               <div className="win-header">
                 <span className="win-title">
-                  <GitCommit size={10} color="#8b5cf6" /> Commit Stream
+                  <GitCommit size={10} color="#8b5cf6" /> Example Files
                 </span>
-                <span style={{ fontSize: "8px", background: "rgba(139,92,246,0.1)", color: "#8b5cf6", padding: "1px 4px", borderRadius: "3px" }}>Live</span>
+                <span style={{ fontSize: "8px", background: "rgba(139,92,246,0.1)", color: "#8b5cf6", padding: "1px 4px", borderRadius: "3px" }}>Example</span>
               </div>
               <div className="win-body">
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {commitTimeline.map((item, i) => (
+                  {exampleFiles.map((item, i) => (
                     <div key={i} style={{
                       padding: "8px",
                       borderRadius: "8px",
@@ -683,19 +600,22 @@ Last Synced: 2 mins ago via WhyCode Bot.`,
                       transition: "all 0.3s"
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8px", color: "#6e6e73", marginBottom: "2px" }}>
-                        <span style={{ fontFamily: "monospace", color: "#8b5cf6" }}>{item.id}</span>
-                        <span>{item.time}</span>
+                        <span style={{ fontFamily: "monospace", color: "#8b5cf6" }}>{item.path}</span>
+                        <span>{item.status}</span>
                       </div>
                       <div style={{ fontSize: "10px", fontWeight: "600", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                        {item.msg}
+                        {item.desc}
                       </div>
                     </div>
                   ))}
                 </div>
+                <div style={{ fontSize: "8px", color: "#71717a", fontStyle: "italic", marginTop: "6px" }}>
+                  * Illustrative example, not real data
+                </div>
               </div>
             </div>
 
-            {/* Window 2: AI Explanation (Updates match top commit) */}
+            {/* Window 2: AST AI Explainer */}
             <div className="floating-win win-ai-explanation glass-panel spotlight-card"
                  onMouseMove={handleCardMouseMove}
                  style={{ transform: `translate3d(${mousePos.x * -15}px, ${mousePos.y * 30}px, 0)` }}>
@@ -703,15 +623,15 @@ Last Synced: 2 mins ago via WhyCode Bot.`,
                 <span className="win-title">
                   <Sparkles size={10} color="#10b981" /> AST AI Explainer
                 </span>
-                <span style={{ fontSize: "8px", color: "#6e6e73" }}>v1.2</span>
+                <span style={{ fontSize: "8px", color: "#6e6e73" }}>Example</span>
               </div>
               <div className="win-body" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <p style={{ margin: 0, color: "#a1a1aa", lineHeight: "1.4", fontSize: "10px" }}>
                   {aiExplanation}
                 </p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "8px", color: "#6e6e73", borderTop: "1px solid rgba(255,255,255,0.03)", paddingTop: "6px" }}>
-                  <span>Scope: authService.js</span>
-                  <span style={{ color: "#10b981", fontWeight: "700" }}>96% confidence</span>
+                  <span>Scope: src/utils/retry.js#L14-L38</span>
+                  <span style={{ color: "#10b981", fontWeight: "600" }}>Verified Citation</span>
                 </div>
               </div>
             </div>
@@ -743,15 +663,15 @@ Last Synced: 2 mins ago via WhyCode Bot.`,
               </div>
             </div>
 
-            {/* Window 4: Repository Health Live Chart */}
+            {/* Window 4: Repository Structure Analysis */}
             <div className="floating-win win-repo-health glass-panel spotlight-card"
                  onMouseMove={handleCardMouseMove}
                  style={{ transform: `translate3d(${mousePos.x * -25}px, ${mousePos.y * -20}px, 0)` }}>
               <div className="win-header">
                 <span className="win-title">
-                  <Activity size={10} color="#10b981" /> Codebase Health
+                  <Activity size={10} color="#10b981" /> AST Signal Spectrum
                 </span>
-                <span style={{ fontSize: "9px", fontWeight: "700", color: "#10b981" }}>94.2 Excellent</span>
+                <span style={{ fontSize: "9px", fontWeight: "700", color: "#10b981" }}>Active</span>
               </div>
               <div className="win-body" style={{ padding: "8px 0 0 0" }}>
                 {/* Simulated live chart oscilloscope using waveOffset */}

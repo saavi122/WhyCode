@@ -6,7 +6,7 @@ const companySchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     logo: { type: String },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    plan: { type: String, enum: ["free", "growth", "enterprise"], default: "free" },
+    plan: { type: String, enum: ["free", "startup", "team", "custom", "growth", "enterprise"], default: "free" },
     github: {
       connected: { type: Boolean, default: false },
       installationId: { type: String },
@@ -15,7 +15,12 @@ const companySchema = new mongoose.Schema(
       connectedAt: { type: Date },
       lastSync: { type: Date },
       status: { type: String, default: "Not Connected" }
-    }
+    },
+    answerEngineMode: {
+      type: String,
+      enum: ["AUTO", "PRIMARY_ONLY", "GEMINI_ONLY"],
+      default: "AUTO",
+    },
   },
   { timestamps: true }
 );

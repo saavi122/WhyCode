@@ -4,4 +4,10 @@
 !.env.demo.example
 node_modules/
 *.pem
-
+*.key
+.cache/
+server/.cache/
+dist/
+dist-ssr/
+*.log
+*.pdf

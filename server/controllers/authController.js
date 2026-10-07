@@ -1,14 +1,17 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import axios from "axios";
 import User from "../models/User.js";
 import Company from "../models/Company.js";
 import Invite from "../models/Invite.js";
-import axios from "axios";
+import { servicesConfig } from "../config/services.js";
+import { saveOAuthState, verifyAndConsumeOAuthState } from "../config/redis.js";
 
 // POST /api/auth/register (Company signup)
 export const register = async (req, res, next) => {
   try {
-    const { companyName, name, email, password } = req.body;
+    const { companyName, name, email, password, orderId, plan } = req.body;
 
     if (!companyName || !name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -25,10 +28,23 @@ export const register = async (req, res, next) => {
     // Hash password with bcrypt
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Determine initial plan
+    let initialPlan = plan || "free";
+    let matchedOrder = null;
+
+    if (orderId) {
+      const Order = (await import("../models/Order.js")).default;
+      matchedOrder = await Order.findOne({ orderId });
+      if (matchedOrder && matchedOrder.planId) {
+        initialPlan = matchedOrder.planId;
+      }
+    }
+
     // Create Company
     const company = await Company.create({
       name: companyName,
       email: lowercaseEmail,
+      plan: initialPlan,
     });
 
     // Create User
@@ -43,6 +59,13 @@ export const register = async (req, res, next) => {
     // Update Company ownerId
     company.ownerId = user._id;
     await company.save();
+
+    // Link Order if exists
+    if (matchedOrder) {
+      matchedOrder.user = user._id;
+      matchedOrder.company = company._id;
+      await matchedOrder.save();
+    }
 
     // Sign JWT
     const token = jwt.sign(
@@ -62,6 +85,7 @@ export const register = async (req, res, next) => {
       company: {
         id: company._id,
         name: company.name,
+        plan: company.plan,
       },
     });
   } catch (err) {
@@ -72,7 +96,7 @@ export const register = async (req, res, next) => {
 // POST /api/auth/login (Unified Admin + Company + Employee login)
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, orderId } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
@@ -95,6 +119,18 @@ export const login = async (req, res, next) => {
     // Check if account is disabled
     if (user.isActive === false) {
       return res.status(403).json({ message: "Account disabled" });
+    }
+
+    // Link order if passed
+    if (orderId && user.company) {
+      const Order = (await import("../models/Order.js")).default;
+      const matchedOrder = await Order.findOne({ orderId });
+      if (matchedOrder) {
+        matchedOrder.user = user._id;
+        matchedOrder.company = user.company;
+        await matchedOrder.save();
+        await Company.findByIdAndUpdate(user.company, { plan: matchedOrder.planId });
+      }
     }
 
     // Sign JWT
@@ -402,24 +438,39 @@ export const getMe = async (req, res, next) => {
 };
 
 // Redirect user to GitHub OAuth
-export const githubAuthorize = (req, res) => {
-  const url = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&scope=repo,read:org,read:user,user:email`;
+export const githubAuthorize = async (req, res) => {
+  const state = crypto.randomBytes(16).toString("hex");
+  await saveOAuthState(state, { provider: "github" }, 600);
+  const callbackUrl = servicesConfig.githubCallbackUrl || `${servicesConfig.serverUrl}/api/github/callback`;
+  const clientId = servicesConfig.githubClientId || process.env.GITHUB_CLIENT_ID;
+  const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=repo,read:org,read:user,user:email&state=${state}`;
   res.redirect(url);
 };
 
 // Handle GitHub OAuth Callback — links GitHub to existing user OR creates new
 export const githubCallback = async (req, res, next) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) {
       return res.status(400).json({ message: "No code provided from GitHub" });
     }
 
+    // Verify state if provided
+    if (state) {
+      const stored = await verifyAndConsumeOAuthState(state);
+      if (!stored && process.env.NODE_ENV === "production") {
+        return res.status(400).json({ message: "Invalid or expired OAuth state parameter" });
+      }
+    }
+
+    const clientId = servicesConfig.githubClientId || process.env.GITHUB_CLIENT_ID;
+    const clientSecret = servicesConfig.githubClientSecret || process.env.GITHUB_CLIENT_SECRET;
+
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
-        client_id: process.env.GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         code,
       },
       { headers: { Accept: "application/json" } }
@@ -433,7 +484,7 @@ export const githubCallback = async (req, res, next) => {
     const accessToken = tokenData.access_token;
 
     const userResponse = await axios.get("https://api.github.com/user", {
-      headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "CodeMemory-App" },
+      headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "WhyCode-App" },
     });
 
     const githubUser = userResponse.data;
@@ -445,7 +496,7 @@ export const githubCallback = async (req, res, next) => {
     if (!email) {
       try {
         const emailsResponse = await axios.get("https://api.github.com/user/emails", {
-          headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "CodeMemory-App" },
+          headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "WhyCode-App" },
         });
         const emails = emailsResponse.data;
         if (Array.isArray(emails)) {
@@ -476,7 +527,7 @@ export const githubCallback = async (req, res, next) => {
       // Create new user (shouldn't happen normally — only for direct GitHub OAuth users)
       let company = await Company.findOne({ name: "Default Corporation" });
       if (!company) {
-        company = await Company.create({ name: "Default Corporation", email: "corp@codememory.local" });
+        company = await Company.create({ name: "Default Corporation", email: "corp@whycode.local" });
       }
       user = await User.create({
         name: githubUser.name || githubUser.login,
@@ -495,7 +546,7 @@ export const githubCallback = async (req, res, next) => {
       expiresIn: "30d",
     });
 
-    const frontendRedirectUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/auth/callback?token=${token}`;
+    const frontendRedirectUrl = `${servicesConfig.clientUrl}/auth/callback?token=${token}`;
     res.redirect(frontendRedirectUrl);
   } catch (err) {
     next(err);
@@ -505,14 +556,18 @@ export const githubCallback = async (req, res, next) => {
 // ─── GOOGLE OAUTH ────────────────────────────────────────────────────────────
 
 // GET /api/auth/google — redirect user to Google consent screen
-export const googleAuthorize = (req, res) => {
+export const googleAuthorize = async (req, res) => {
+  const state = crypto.randomBytes(16).toString("hex");
+  await saveOAuthState(state, { provider: "google" }, 600);
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${servicesConfig.serverUrl}/api/auth/google/callback`;
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: process.env.GOOGLE_REDIRECT_URI || `${process.env.SERVER_URL || "http://localhost:5000"}/api/auth/google/callback`,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
     access_type: "offline",
     prompt: "select_account",
+    state,
   });
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
 };
@@ -520,13 +575,20 @@ export const googleAuthorize = (req, res) => {
 // GET /api/auth/google/callback — exchange code for tokens, upsert user, issue JWT
 export const googleCallback = async (req, res, next) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) {
-      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=no_code`);
+      return res.redirect(`${servicesConfig.clientUrl}/login?error=no_code`);
+    }
+
+    if (state) {
+      const stored = await verifyAndConsumeOAuthState(state);
+      if (!stored && process.env.NODE_ENV === "production") {
+        return res.redirect(`${servicesConfig.clientUrl}/login?error=invalid_state`);
+      }
     }
 
     // 1. Exchange authorization code for tokens
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.SERVER_URL || "http://localhost:5000"}/api/auth/google/callback`;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${servicesConfig.serverUrl}/api/auth/google/callback`;
     const tokenRes = await axios.post("https://oauth2.googleapis.com/token", new URLSearchParams({
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -539,7 +601,7 @@ export const googleCallback = async (req, res, next) => {
 
     const { access_token, id_token } = tokenRes.data;
     if (!access_token) {
-      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=token_exchange_failed`);
+      return res.redirect(`${servicesConfig.clientUrl}/login?error=token_exchange_failed`);
     }
 
     // 2. Fetch Google user profile
@@ -548,9 +610,8 @@ export const googleCallback = async (req, res, next) => {
     });
 
     const googleUser = profileRes.data;
-    // googleUser = { id, email, name, picture, verified_email }
     if (!googleUser.email) {
-      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=no_email`);
+      return res.redirect(`${servicesConfig.clientUrl}/login?error=no_email`);
     }
 
     const email = googleUser.email.toLowerCase();
@@ -587,7 +648,7 @@ export const googleCallback = async (req, res, next) => {
     }
 
     if (user.isActive === false) {
-      return res.redirect(`${process.env.CLIENT_URL || "http://localhost:5173"}/login?error=account_disabled`);
+      return res.redirect(`${servicesConfig.clientUrl}/login?error=account_disabled`);
     }
 
     // 4. Issue JWT and redirect to frontend
@@ -597,7 +658,7 @@ export const googleCallback = async (req, res, next) => {
       { expiresIn: "30d" }
     );
 
-    const frontendRedirectUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/auth/callback?token=${token}`;
+    const frontendRedirectUrl = `${servicesConfig.clientUrl}/auth/callback?token=${token}`;
     res.redirect(frontendRedirectUrl);
   } catch (err) {
     next(err);
