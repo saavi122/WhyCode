@@ -1361,6 +1361,14 @@ export async function queryRepositoryKnowledge(authContext, repositoryId, query,
         const isAllowedForGemini = isLlmAllowed(repoTarget, { ...servicesConfig, llmExternal: true });
         const isWithinDailyLimit = !geminiDailyTracker.getUsage().limitReached;
 
+        logInfo("[CHAT] Evaluating Gemini fallback conditions", {
+          isGeminiConfigured,
+          isAllowedForGemini,
+          isWithinDailyLimit,
+          hasApiKey: Boolean(servicesConfig.geminiApiKey || process.env.GEMINI_API_KEY),
+          repoFullName: repoTarget?.fullName,
+        });
+
         let geminiSucceeded = false;
 
         if (isGeminiConfigured && isAllowedForGemini && isWithinDailyLimit) {
