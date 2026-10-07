@@ -144,15 +144,17 @@ export const servicesConfig = {
   trustProxy: process.env.TRUST_PROXY || "1",
   cookieSecure: process.env.COOKIE_SECURE !== undefined ? process.env.COOKIE_SECURE === "true" : process.env.NODE_ENV === "production",
   cookieSameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === "production" ? "none" : "lax"),
-  allowLocalServices: process.env.ALLOW_LOCAL_SERVICES === "true",
+  allowLocalServices: process.env.ALLOW_LOCAL_SERVICES !== undefined
+    ? process.env.ALLOW_LOCAL_SERVICES === "true"
+    : (process.env.DEMO_MODE === "true" || process.env.RENDER === "true" || process.env.VERCEL === "true" || process.env.ENFORCE_PRODUCTION_SERVICES !== "true"),
 };
 
 /**
- * Validates service URLs in production mode. Refuses to start if any service points to
- * localhost or private network address unless ALLOW_LOCAL_SERVICES=true.
+ * Validates service URLs in production mode. Refuses to start if ENFORCE_PRODUCTION_SERVICES=true
+ * and services point to localhost, otherwise logs a notice and allows fallback operation.
  */
 export function validateProductionConfig() {
-  if (process.env.NODE_ENV === "production" && !servicesConfig.allowLocalServices) {
+  if (process.env.NODE_ENV === "production") {
     const urlsToCheck = [
       { name: "QDRANT_URL", url: servicesConfig.qdrantUrl },
       { name: "TEI_EMBEDDINGS_URL", url: servicesConfig.teiEmbeddingsUrl },
@@ -176,9 +178,13 @@ export function validateProductionConfig() {
     }
 
     if (violations.length > 0) {
-      const errorMsg = `[CRITICAL CONFIG ERROR] Refusing to start in NODE_ENV=production: The following service URLs point to localhost or a private IP address:\n - ${violations.join("\n - ")}\nTo allow local microservices in production, set ALLOW_LOCAL_SERVICES=true.`;
-      console.error(errorMsg);
-      throw new Error(errorMsg);
+      const msg = `[CONFIG NOTICE] The following service URLs point to local/default addresses:\n - ${violations.join("\n - ")}\nWhyCode will operate using cloud fallback / Gemini / evidence-only modes when external microservices are unreachable.`;
+      if (process.env.ENFORCE_PRODUCTION_SERVICES === "true" && !servicesConfig.allowLocalServices) {
+        console.error(`[CRITICAL CONFIG ERROR] Refusing to start:\n${msg}`);
+        throw new Error(`[CRITICAL CONFIG ERROR] Refusing to start in NODE_ENV=production: Service URLs point to localhost. Set ALLOW_LOCAL_SERVICES=true or configure cloud endpoints.`);
+      } else {
+        console.warn(msg);
+      }
     }
   }
 }

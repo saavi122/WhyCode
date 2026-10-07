@@ -25,6 +25,8 @@ services:
         value: "saavi122/gigsure,saavi122/whycode"
       - key: THRESHOLDS_FILE
         value: config/thresholds.demo.json
+      - key: ALLOW_LOCAL_SERVICES
+        value: "true"
 
       # Auto-generated secrets
       - key: JWT_SECRET
