@@ -946,46 +946,57 @@ export async function queryRepositoryKnowledge(authContext, repositoryId, query,
     }
 
     // 4. SEMANTIC HYBRID RETRIEVAL:
-    // Generate vector embedding for cleaned query
-    const queryVector = await getEmbedding(cleanedQuery || query);
-    console.log("[CHAT] embedding generated");
-
-    // Dense vector search from Qdrant
-    const CANDIDATES_COUNT = 30;
-    const rawMatches = await searchChunks(authContext, repositoryId, collectionName, queryVector, CANDIDATES_COUNT);
+    let rawMatches = [];
     const intent = classifyQueryIntent(cleanedQuery || query);
 
-    // Fetch dedicated COMMIT chunks from Qdrant if change/commit-related
-    if (intent.isChange || intent.isWho || intent.category === "what_changed" || intent.category === "who_wrote") {
-      try {
-        const commitFilter = {
-          must: [
-            { key: "companyId", match: { value: companyId } },
-            { key: "repositoryId", match: { value: repositoryId } },
-            { key: "documentType", match: { value: "COMMIT" } },
-          ],
-        };
-        const commitMatches = await searchChunks(authContext, repositoryId, collectionName, queryVector, 15, commitFilter);
-        for (const cm of commitMatches) {
-          const id = String(cm.id || cm.payload?.chunkId);
-          if (!rawMatches.some((m) => String(m.id || m.payload?.chunkId) === id)) {
-            rawMatches.push(cm);
+    try {
+      // Generate vector embedding for cleaned query
+      const queryVector = await getEmbedding(cleanedQuery || query);
+      console.log("[CHAT] embedding generated");
+
+      // Dense vector search from Qdrant
+      const CANDIDATES_COUNT = 30;
+      rawMatches = await searchChunks(authContext, repositoryId, collectionName, queryVector, CANDIDATES_COUNT);
+
+      // Fetch dedicated COMMIT chunks from Qdrant if change/commit-related
+      if (intent.isChange || intent.isWho || intent.category === "what_changed" || intent.category === "who_wrote") {
+        try {
+          const commitFilter = {
+            must: [
+              { key: "companyId", match: { value: companyId } },
+              { key: "repositoryId", match: { value: repositoryId } },
+              { key: "documentType", match: { value: "COMMIT" } },
+            ],
+          };
+          const commitMatches = await searchChunks(authContext, repositoryId, collectionName, queryVector, 15, commitFilter);
+          for (const cm of commitMatches) {
+            const id = String(cm.id || cm.payload?.chunkId);
+            if (!rawMatches.some((m) => String(m.id || m.payload?.chunkId) === id)) {
+              rawMatches.push(cm);
+            }
           }
+        } catch (commErr) {
+          logInfo("Commit candidate fetch skipped", { message: commErr.message });
         }
-      } catch (commErr) {
-        logInfo("Commit candidate fetch skipped", { message: commErr.message });
       }
+    } catch (vecErr) {
+      logInfo("[CHAT] Vector embedding / Qdrant search unavailable, proceeding with structured & hybrid keyword retrieval", {
+        message: vecErr.message,
+        code: vecErr.code,
+      });
     }
 
     // Hybrid keyword search against CommitMemory store in MongoDB
     if (mongoose.connection && mongoose.connection.readyState === 1) {
       try {
-        const searchWords = cleanedQuery
+        // Extract search terms including file names, path parts, and keywords
+        const searchWords = (cleanedQuery || query)
+          .replace(/[\\/._-]/g, " ")
           .split(/\s+/)
-          .filter((w) => w.length > 2 && !/^(what|where|when|which|how|why|does|did|the|and|for|with|this|that|from|into|about|exist|exists|history)$/i.test(w));
+          .filter((w) => w.length >= 2 && !/^(what|where|when|which|how|why|does|did|the|and|for|with|this|that|from|into|about|exist|exists|history|tell|show|give|code|repo)$/i.test(w));
 
         if (searchWords.length > 0) {
-          const kwRegexes = searchWords.slice(0, 4).map((k) => new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+          const kwRegexes = searchWords.slice(0, 6).map((k) => new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
           const repoQuery = {
             $or: [
               { repository: repositoryId },
@@ -1018,10 +1029,38 @@ export async function queryRepositoryKnowledge(authContext, repositoryId, query,
                   author: hc.authorName || hc.author || "",
                   timestamp: hc.committedAt || hc.date || "",
                   url: hc.htmlUrl || (repoDoc?.fullName ? `https://github.com/${repoDoc.fullName}/commit/${hc.commitSha}` : ""),
-                  text: `Commit ${hc.commitSha}\nAuthor: ${hc.authorName || hc.author || ""}\nDate: ${hc.committedAt || hc.date || ""}\nMessage: ${hc.message || ""}\nFiles Changed: ${(hc.filesChanged || []).join(", ")}\nDiff:\n${hc.diffSummary || ""}`,
+                  text: `Commit ${hc.commitSha}\nAuthor: ${hc.authorName || hc.author || ""}\nDate: ${hc.committedAt || hc.date || ""}\nMessage: ${hc.message || ""}\nFiles Changed: ${(hc.filesChanged || []).join(", ")}\nDiff:\n${hc.diffSummary || ""}\nSummary:\n${hc.aiSummary || ""}`,
                 },
               });
             }
+          }
+        }
+
+        // If still no candidates found, pull recent commits as base repository evidence for grounding
+        if (rawMatches.length === 0) {
+          const repoQuery = {
+            $or: [
+              { repository: repositoryId },
+              ...(mongoose.Types.ObjectId.isValid(repositoryId) ? [{ repository: new mongoose.Types.ObjectId(repositoryId) }] : []),
+              ...(repoDoc?._id ? [{ repository: repoDoc._id }, ...(mongoose.Types.ObjectId.isValid(repoDoc._id) ? [{ repository: new mongoose.Types.ObjectId(repoDoc._id) }] : [])] : []),
+            ],
+          };
+          const fallbackCommits = await CommitMemory.find(repoQuery).sort({ committedAt: -1, date: -1 }).limit(5).lean();
+          for (const hc of fallbackCommits) {
+            const id = `cm-${hc.commitSha}`;
+            rawMatches.push({
+              id,
+              score: 0.75,
+              payload: {
+                chunkId: id,
+                documentType: "COMMIT",
+                commitSha: hc.commitSha,
+                author: hc.authorName || hc.author || "",
+                timestamp: hc.committedAt || hc.date || "",
+                url: hc.htmlUrl || (repoDoc?.fullName ? `https://github.com/${repoDoc.fullName}/commit/${hc.commitSha}` : ""),
+                text: `Commit ${hc.commitSha}\nAuthor: ${hc.authorName || hc.author || ""}\nDate: ${hc.committedAt || hc.date || ""}\nMessage: ${hc.message || ""}\nFiles Changed: ${(hc.filesChanged || []).join(", ")}\nDiff:\n${hc.diffSummary || ""}\nSummary:\n${hc.aiSummary || ""}`,
+              },
+            });
           }
         }
       } catch (hybErr) {
@@ -1029,7 +1068,7 @@ export async function queryRepositoryKnowledge(authContext, repositoryId, query,
       }
     }
 
-    console.log("[CHAT] Qdrant search completed");
+    console.log("[CHAT] Candidate retrieval completed");
     console.log(`[CHAT] retrieved candidates: ${rawMatches ? rawMatches.length : 0}`);
 
     if (!rawMatches || rawMatches.length === 0) {

@@ -111,7 +111,8 @@ export function getMaxTokens() {
  */
 export function getTimeoutMs() {
   const parsed = parseInt(process.env.LLM_TIMEOUT_MS, 10);
-  return isNaN(parsed) || parsed <= 0 ? 30000 : parsed;
+  if (!isNaN(parsed) && parsed > 0) return parsed;
+  return process.env.NODE_ENV === "production" && getLlmBaseUrl().includes("127.0.0.1") ? 5000 : 30000;
 }
 
 /**
@@ -280,6 +281,10 @@ Respond with a valid JSON object in this exact schema:
             },
             { headers: getHeaders(), timeout: timeoutMs }
           );
+        }
+
+        if (err.code === "ECONNREFUSED" || err.code === "ENOTFOUND") {
+          throw err;
         }
 
         const status = err.response?.status;
