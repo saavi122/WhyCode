@@ -73,6 +73,16 @@ describe("QdrantStore multi-tenant wrapper", () => {
     expect(results).toHaveLength(1);
   });
 
+  it("should send tenant filter when deleting repository chunks", async () => {
+    axios.post.mockResolvedValueOnce({ data: { result: { status: "completed" } } });
+    const session = { companyId: "comp-1" };
+    await deleteRepositoryChunks(session, "repo-1", "test_collection");
+
+    expect(axios.post).toHaveBeenCalledTimes(1);
+    const calledBody = axios.post.mock.calls[0][1];
+    expect(calledBody.filter).toEqual(buildTenantFilter("comp-1", "repo-1"));
+  });
+
   it("should refuse writes to remote non-test collections when ALLOW_REAL_QDRANT_WRITES is not true", async () => {
     const { assertQdrantWriteAllowed } = await import("../services/qdrantStore.js");
     const { servicesConfig } = await import("../config/services.js");
