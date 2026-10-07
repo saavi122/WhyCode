@@ -34,16 +34,20 @@ export default function Login() {
   const initialTab = location.pathname.startsWith("/company") ? "company" : "developer";
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  /* Shared state preserved on tab switch */
-  const [devEmail,    setDevEmail]    = useState("");
-  const [devPassword, setDevPassword] = useState("");
-  const [devRemember, setDevRemember] = useState(false);
-  const [devShowPw,   setDevShowPw]   = useState(false);
+  /* Sync activeTab if user navigates via browser or deep link */
+  useEffect(() => {
+    if (location.pathname.startsWith("/company")) {
+      setActiveTab("company");
+    } else if (location.pathname.startsWith("/employee") || location.pathname.startsWith("/login")) {
+      setActiveTab("developer");
+    }
+  }, [location.pathname]);
 
-  const [coEmail,    setCoEmail]    = useState("");
-  const [coPassword, setCoPassword] = useState("");
-  const [coRemember, setCoRemember] = useState(false);
-  const [coShowPw,   setCoShowPw]   = useState(false);
+  /* Form state */
+  const [email,    setEmail]    = useState(localStorage.getItem("remembered_email") || "");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(!!localStorage.getItem("remembered_email"));
+  const [showPw,   setShowPw]   = useState(false);
 
   const [error,   setError]   = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,19 +73,15 @@ export default function Login() {
   /* ── Submit handler ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const email    = activeTab === "developer" ? devEmail    : coEmail;
-    const password = activeTab === "developer" ? devPassword : coPassword;
-    const remember = activeTab === "developer" ? devRemember : coRemember;
-
     if (!email || !password) return;
     setError("");
     setLoading(true);
 
     try {
-      const res = await API.post("/auth/login", { email: email.toLowerCase(), password });
+      const res = await API.post("/auth/login", { email: email.toLowerCase().trim(), password });
       login(res.data.token, res.data.user);
       if (remember) {
-        localStorage.setItem("remembered_email", email);
+        localStorage.setItem("remembered_email", email.trim());
       } else {
         localStorage.removeItem("remembered_email");
       }
@@ -229,12 +229,8 @@ export default function Login() {
                     <input
                       type="email"
                       required
-                      value={activeTab === "developer" ? devEmail : coEmail}
-                      onChange={(e) =>
-                        activeTab === "developer"
-                          ? setDevEmail(e.target.value)
-                          : setCoEmail(e.target.value)
-                      }
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder={
                         activeTab === "developer"
                           ? "dev@yourcompany.com"
@@ -251,33 +247,19 @@ export default function Login() {
                   <div className="input-wrapper">
                     <span className="input-icon-left"><Lock size={14} /></span>
                     <input
-                      type={
-                        (activeTab === "developer" ? devShowPw : coShowPw)
-                          ? "text"
-                          : "password"
-                      }
+                      type={showPw ? "text" : "password"}
                       required
-                      value={activeTab === "developer" ? devPassword : coPassword}
-                      onChange={(e) =>
-                        activeTab === "developer"
-                          ? setDevPassword(e.target.value)
-                          : setCoPassword(e.target.value)
-                      }
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       className="input-field-custom select-text"
                     />
                     <button
                       type="button"
-                      onClick={() =>
-                        activeTab === "developer"
-                          ? setDevShowPw(!devShowPw)
-                          : setCoShowPw(!coShowPw)
-                      }
+                      onClick={() => setShowPw(!showPw)}
                       className="btn-toggle-password-custom"
                     >
-                      {(activeTab === "developer" ? devShowPw : coShowPw)
-                        ? <EyeOff size={14} />
-                        : <Eye size={14} />}
+                      {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                 </div>
@@ -287,12 +269,8 @@ export default function Login() {
                   <label className="checkbox-label-custom">
                     <input
                       type="checkbox"
-                      checked={activeTab === "developer" ? devRemember : coRemember}
-                      onChange={(e) =>
-                        activeTab === "developer"
-                          ? setDevRemember(e.target.checked)
-                          : setCoRemember(e.target.checked)
-                      }
+                      checked={remember}
+                      onChange={(e) => setRemember(e.target.checked)}
                       className="checkbox-input-custom"
                     />
                     <span>Remember me</span>
