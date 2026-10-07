@@ -16,9 +16,12 @@ let webhookWorker = null;
  */
 function initQueues() {
   const { redisUrl, redisHost, redisPort, redisPassword } = servicesConfig;
-  const isRedisConfigured = Boolean(redisUrl || (redisHost && redisHost !== "127.0.0.1") || process.env.NODE_ENV === "production");
+  const isRedisConfigured = Boolean(
+    redisUrl || (redisHost && redisHost !== "127.0.0.1") || (process.env.NODE_ENV !== "production" && (process.env.REDIS_HOST || process.env.REDIS_URL))
+  );
 
   if (!isRedisConfigured) {
+    logInfo("[QUEUE] Redis not configured; operating in reliable in-memory / asynchronous fallback mode");
     return;
   }
 

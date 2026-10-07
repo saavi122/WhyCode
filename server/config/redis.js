@@ -19,6 +19,15 @@ export function getRedisClient() {
 
   const { redisUrl, redisHost, redisPort, redisPassword } = servicesConfig;
 
+  // Only connect if REDIS_URL is explicitly set, or non-default host configured, or dev environment with Redis envs
+  const isRedisConfigured = Boolean(
+    redisUrl || (redisHost && redisHost !== "127.0.0.1") || (process.env.NODE_ENV !== "production" && (process.env.REDIS_HOST || process.env.REDIS_URL))
+  );
+
+  if (!isRedisConfigured) {
+    return null;
+  }
+
   try {
     const options = {
       maxRetriesPerRequest: null, // Required for BullMQ
